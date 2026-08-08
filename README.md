@@ -35,7 +35,7 @@ To keep raw JSON/TS data files clean while supporting rich text formatting, the 
 | `<ITALIC>text</ITALIC>` | `<em>text</em>` | *Italic text* |
 | `<UNDERLINE>text</UNDERLINE>` | `<u>text</u>` | <u>Underlined text</u> |
 | `<HIGHLIGHT>text</HIGHLIGHT>` | `<mark style="...">text</mark>` | <mark style="background-color: rgb(8, 145, 178); padding: 2px 4px; border-radius: 2px;">Highlighted text</mark> |
-| `<STRIKETHROUGH>text</STRIKETHROUGH>` | `<s>text</s>` | <s>Strikethrough text</s> |
+| `<STRIKETHROUGH>text</STRIKETHROUGH>` | `<s>text</s>` | ~~Strikethrough text~~ |
 
 ---
 
