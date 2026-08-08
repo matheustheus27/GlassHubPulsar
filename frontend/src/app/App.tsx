@@ -145,7 +145,7 @@ export default function App() {
           </button>
         </div>
 
-          {/* TABS DE NAVEGAÇÃO */}
+          {/* NAVIGATION TABS */}
           <div className="flex gap-2 mb-6 border-b border-slate-800 pb-2 print:hidden">
             <button
               onClick={() => setActiveTab('resume')}
@@ -193,7 +193,7 @@ export default function App() {
 
         <main id="cv-root" className="space-y-5">
   
-            {/* HEADER VISUAL (Comum a ambos ou ajustado por aba) */}
+            {/* VISUAL HEADER (Common to both or adjusted by tab) */}
             <header 
               className={`flex flex-col gap-2 border-b pb-6 ${borderCol}`}
               style={{ borderBottomColor: styles.card.borderColor }}
@@ -252,7 +252,7 @@ export default function App() {
               </div>
             </header>
 
-            {/* CONTEÚDO: RESUME / CURRÍCULO */}
+            {/* CONTENT: RESUME */}
             {activeTab === 'resume' && (
               <>
                 {/* PROFESSIONAL RESUME */}
@@ -419,7 +419,7 @@ export default function App() {
               </>
             )}
 
-            {/* CONTEÚDO: CARTA DE APRESENTAÇÃO */}
+            {/* CONTENT: COVER LETTER */}
             {activeTab === 'cover' && (
               <GlassCard 
                 style={{ backgroundColor: styles.card.backgroundColor, borderColor: styles.card.borderColor }}

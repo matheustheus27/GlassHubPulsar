@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD033 -->
+
 # 📄 GlassmorphicProfessionalResume - Dynamic CV & Cover Letter Engine
 
 A modern, full-stack ecosystem designed to manage, render, and export professional resumes and cover letters dynamically. This project replaces traditional, rigid styling approaches with a decoupled architecture, utilizing a highly customizable frontend and a dedicated backend service exclusively focused on consistent PDF document generation.
@@ -7,6 +9,7 @@ A modern, full-stack ecosystem designed to manage, render, and export profession
 ## 🎯 Project Objectives & New Features
 
 * **Dual Document Support:** Manage and export both **Resumes (CVs)** and **Cover Letters** seamlessly from the same application.
+* **Custom Text Formatting Tags:** Integrated a parser (`processInHtml`) allowing custom inline formatting tags (`<BOLD>`, `<ITALIC>`, `<UNDERLINE>`, `<HIGHLIGHT>`, `<STRIKETHROUGH>`) within text strings and JSON/TS data files.
 * **New Projects Section:** Native support for showcasing personal and professional projects in the resume layout, including descriptions, tech stacks, and links.
 * **Autonomous PDF Calibration Engine:** The backend rendering engine automatically calculates element dimensions, viewports, and page splits dynamically, running internal layout validation tests to guarantee perfect visual distribution on output.
 * **User Feedback & Notifications:** Integrated real-time notifications to inform the user of the exact status of PDF generation (success or failure).
@@ -14,6 +17,25 @@ A modern, full-stack ecosystem designed to manage, render, and export profession
 * **Internationalization (i18n):** Native support for multiple languages (Portuguese and English) switchable dynamically at runtime.
 * **Rendering Consistency:** Eliminate layout and formatting inconsistencies caused by client-side browser print engines by delegating PDF generation to a controlled server-side Linux environment inside a container.
 * **Development Reactivity:** Full Hot Reload integration across both services, making changes to data, layouts, or server scripts immediately available.
+
+---
+
+## 🏷️ Custom Text Formatting Tags & Layout Accuracy
+
+To keep raw JSON/TS data files clean while supporting rich text formatting, the system implements a unified tag processing logic on both client and server:
+
+* **Frontend (`frontend/src/app/services/tagProcessorService.ts`):** Converts inline tags into styled HTML elements for live preview.
+* **Backend (`backend/layout/TagProcessor.js`):** Parses custom tags for HTML PDF templates and provides a `stripTags()` method. This allows the `HeightEstimator` to calculate precise text line wraps and page heights based purely on the visible character length without count bloat from raw tag strings.
+
+### Supported Formatting Tags
+
+| Tag | Rendered HTML | Visual Effect |
+| :--- | :--- | :--- |
+| `<BOLD>text</BOLD>` | `<strong>text</strong>` | **Bold text** |
+| `<ITALIC>text</ITALIC>` | `<em>text</em>` | *Italic text* |
+| `<UNDERLINE>text</UNDERLINE>` | `<u>text</u>` | <u>Underlined text</u> |
+| `<HIGHLIGHT>text</HIGHLIGHT>` | `<mark style="...">text</mark>` | <mark style="background-color: rgb(8, 145, 178); padding: 2px 4px; border-radius: 2px;">Highlighted text</mark> |
+| `<STRIKETHROUGH>text</STRIKETHROUGH>` | `<s>text</s>` | <s>Strikethrough text</s> |
 
 ---
 
