@@ -44,6 +44,19 @@ services:
     labels:
       com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "backend"}]'
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: document-ai-engine
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - doc_network
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2 && wait"]
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "ollama", "service": "ai-engine"}]'
+
   datadog:
     image: gcr.io/datadoghq/agent:7
     container_name: datadog-agent
@@ -65,3 +78,6 @@ services:
 networks:
   doc_network:
     driver: bridge
+
+volumes:
+  ollama_data:
