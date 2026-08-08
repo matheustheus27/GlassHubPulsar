@@ -1,0 +1,54 @@
+import {ProjectDetails} from '../types/resumeType';
+
+export const projectDetails: Record<string, ProjectDetails> = {
+    "pt-BR": {
+        projectTitle: "PROJETOS DE DESTAGUE",
+        projects: [
+            {
+                title: "FastArchive CLI",
+                description: "Go, Utilitários de CLI, Compressão de Arquivos",
+                link: "https://github.com/example-user/FastArchive",
+                bullets: [
+                    "Desenvolvimento de uma ferramenta de linha de comando leve e de alto rendimento para compressão e gerenciamento de arquivos em lote.",
+                    "Foco em execução concorrente utilizando goroutines para máxima utilização de múltiplos núcleos de processamento.",
+                    "Zero dependências externas com compilação estática para facilidade de distribuição."
+                ]
+            },
+            {
+                title: "Dynamic Resume Builder",
+                description: "React, TypeScript, Tailwind CSS, PDF Generation Engine",
+                link: "https://github.com/example-user/DynamicResumeBuilder",
+                bullets: [
+                    "Aplicação web interativa para criação e personalização em tempo real de documentos profissionais.",
+                    "Integração de motor backend para renderização semiprecisa de layout A4 e exportação vetorial de arquivos PDF.",
+                    "Arquitetura focada na separação modular de schemas de tradução e dados estilizados."
+                ]
+            }
+        ]
+    },
+    "en-US": {
+        projectTitle: "FEATURED PROJECTS",
+        projects: [
+            {
+                title: "FastArchive CLI",
+                description: "Go, CLI Tooling, File Compression",
+                link: "https://github.com/example-user/FastArchive",
+                bullets: [
+                    "Engineered a lightweight, high-throughput command-line tool for parallel file archiving and compression.",
+                    "Focused on concurrent execution leveraging Go channels and goroutines for multi-core performance optimization.",
+                    "Built with zero external dependencies and static cross-compilation for seamless deployment."
+                ]
+            },
+            {
+                title: "Dynamic Resume Builder",
+                description: "React, TypeScript, Tailwind CSS, PDF Generation Engine",
+                link: "https://github.com/example-user/DynamicResumeBuilder",
+                bullets: [
+                    "Interactive web application designed for real-time creation and layout customization of professional CVs.",
+                    "Integrated backend engine for precise A4 page layout calculation and vector PDF export capabilities.",
+                    "Designed around a clean component architecture with decoupled translation schemas."
+                ]
+            }
+        ]
+    }
+};

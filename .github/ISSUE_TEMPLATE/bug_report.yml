@@ -1,0 +1,23 @@
+name: "🐛 Bug Report / Relato de Bug"
+description: "Report a software failure or unexpected behavior / Relate uma falha ou comportamento inesperado."
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to Reproduce / Passos para Reproduzir"
+      description: "Tell us exactly how the error happens. / Diga-nos exatamente como o erro acontece."
+      placeholder: |
+        1. Run command X...
+        2. Pass parameter Y...
+        3. See error Z.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: "Environment / Ambiente do Sistema"
+      description: "e.g., Windows 11, .NET 8 SDK, CLI v1.0.0 / Ex: Windows 11, .NET 8 SDK, CLI v1.0.0"
+    validations:
+      required: true

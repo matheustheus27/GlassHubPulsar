@@ -6,19 +6,27 @@ export const skillsDetails: Record<string, SkillsDetails> = {
         skills: [
             {
                 name: "LINGUAGENS",
-                items: ["PHP", "Python", "C", "C++", "C#", "Java", "JavaScript", "HTML", "CSS"]
+                items: ["TypeScript", "JavaScript", "Go", "Python", "Java", "C#", "SQL", "HTML5/CSS3"]
             },
             {
-                name: "PROTOCOLOS E FRAMEWORKS",
-                items: ["Webhooks", "WebSockets", "Pooling", "APIs REST", "Laravel", "Node.js", "Vue", "React", "Angular", "Slim", "Symfony", "Doctrine"]
+                name: "FRAMEWORKS E BIBLIOTECAS",
+                items: ["Node.js", "Express", "NestJS", "React", "Next.js", "Vue.js", "Tailwind CSS", "GraphQL"]
             },
             {
-                name: "BANCOS DE DADOS E DEVOPS",
-                items: ["MongoDB", "Oracle SQL", "SQL Server", "MySQL", "Redis", "Docker", "Git", "Jenkins", "CI/CD"]
+                name: "BANCOS DE DADOS",
+                items: ["PostgreSQL", "MongoDB", "MySQL", "Redis", "Elasticsearch"]
             },
             {
-                name: "METODOLOGIAS",
-                items: ["Scrum", "Kanban", "Desenvolvimento Ágil de Software", "Documentação Técnica", "Arquitetura de Software"]
+                name: "DEVOPS E CLOUD",
+                items: ["Docker", "Docker Compose", "Kubernetes", "AWS (S3, EC2)", "GitHub Actions", "CI/CD"]
+            },
+            {
+                name: "PROTOCOLOS E ARQUITETURA",
+                items: ["APIs RESTful", "Webhooks", "WebSockets", "Microsserviços", "Mensageria (RabbitMQ, Kafka)"]
+            },
+            {
+                name: "METODOLOGIAS E BOAS PRÁTICAS",
+                items: ["Metodologias Ágeis (Scrum/Kanban)", "Clean Code & SOLID", "TDD", "Arquitetura Limpa", "Design Patterns"]
             }
         ]
     },
@@ -27,19 +35,27 @@ export const skillsDetails: Record<string, SkillsDetails> = {
         skills: [
             {
                 name: "LANGUAGES",
-                items: ["PHP", "Python", "C", "C++", "C#", "Java", "JavaScript", "HTML", "CSS", "TypeScript"]
+                items: ["TypeScript", "JavaScript", "Go", "Python", "Java", "C#", "SQL", "HTML5/CSS3"]
             },
             {
                 name: "FRAMEWORKS AND LIBRARIES",
-                items: ["Webhooks", "WebSockets", "Pooling", "APIs REST", "Laravel", "Node.js", "Vue", "React", "Angular", "Slim", "Symfony", "Doctrine"]
+                items: ["Node.js", "Express", "NestJS", "React", "Next.js", "Vue.js", "Tailwind CSS", "GraphQL"]
             },
             {
-                name: "DATABASES AND DEVOPS",
-                items: ["MongoDB", "Oracle SQL", "SQL Server", "MySQL", "Redis", "Docker", "Git", "Jenkins", "CI/CD"]
+                name: "DATABASES",
+                items: ["PostgreSQL", "MongoDB", "MySQL", "Redis", "Elasticsearch"]
             },
             {
-                name: "METHODOLOGIES",
-                items: ["Scrum", "Kanban", "Agile Software Development", "Technical Documentation", "Software Architecture"]
+                name: "DEVOPS AND CLOUD",
+                items: ["Docker", "Docker Compose", "Kubernetes", "AWS (S3, EC2)", "GitHub Actions", "CI/CD"]
+            },
+            {
+                name: "PROTOCOLS AND ARCHITECTURE",
+                items: ["RESTful APIs", "Webhooks", "WebSockets", "Microservices", "Messaging (RabbitMQ, Kafka)"]
+            },
+            {
+                name: "METHODOLOGIES AND BEST PRACTICES",
+                items: ["Agile Methodologies (Scrum/Kanban)", "Clean Code & SOLID", "TDD", "Clean Architecture", "Design Patterns"]
             }
         ]
     }

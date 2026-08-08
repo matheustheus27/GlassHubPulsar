@@ -1,9 +1,11 @@
 import { Locale, TranslationDict } from '../types/translationType';
 import { personalDetails } from './PersonalData';
-import { summaryDetails } from './SummaryData.ts.exemple';
+import { summaryDetails } from './SummaryData';
 import { skillsDetails } from './SkillsData';
 import { experienceDetails } from './ExperienceData';
 import { educationDetails } from './EducationData';
+import { projectDetails } from './ProjectData';
+import { coverLetterDetails } from './CoverLetterData';
 
 export const Translations: Record<Locale, TranslationDict> = {
     'pt-BR': {
@@ -11,13 +13,18 @@ export const Translations: Record<Locale, TranslationDict> = {
         summaryDetails: summaryDetails['pt-BR'],
         skillsDetails: skillsDetails['pt-BR'],
         experienceDetails: experienceDetails['pt-BR'],
-        educationDetails: educationDetails['pt-BR']
+        educationDetails: educationDetails['pt-BR'],
+        projectDetails: projectDetails['pt-BR'],
+        coverLetterDetails: coverLetterDetails['pt-BR']
+
     },
     'en-US': {
         personalDetails: personalDetails('en-US'),
         summaryDetails: summaryDetails['en-US'],
         skillsDetails: skillsDetails['en-US'],
         experienceDetails: experienceDetails['en-US'],
-        educationDetails: educationDetails['en-US']
+        educationDetails: educationDetails['en-US'],
+        projectDetails: projectDetails['en-US'],
+        coverLetterDetails: coverLetterDetails['en-US']
     }
 };

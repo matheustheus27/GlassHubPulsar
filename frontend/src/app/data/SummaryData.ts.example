@@ -1,12 +1,12 @@
-import { SummaryDetails } from '../types/resumeType';
+import {SummaryDetails} from '../types/resumeType';
 
 export const summaryDetails: Record<string, SummaryDetails> = {
     'pt-BR': {
         summaryTitle: "RESUMO PROFISSIONAL",
-        summary: "Engenheiro de Software com ampla experiência no setor de tecnologia, focado em desenvolvimento backend e arquitetura de integrações de sistemas. Especialista na construção, sustentação e refatoração de APIs REST robustas e pipelines de processamento de dados assíncronos. Sólida vivência em ecossistemas transacionais de alta concorrência, lidando com arquiteturas orientadas a eventos, webhooks e otimização de bancos de dados estruturados e NoSQL. Forte fundamentação teórica voltada para o desenho de soluções altamente escaláveis, seguras e devidamente documentadas.",
+        summary: "<BOLD>Engenheiro de Software</BOLD> com mais de 8 anos de experiência em desenvolvimento de aplicações e <BOLD>arquitetura de sistemas distribuídos</BOLD>. Especialista no projeto e evolução de <BOLD>APIs RESTful e GraphQL</BOLD>, integração entre plataformas heterogêneas e desenvolvimento de <BOLD>pipelines assíncronos de alto processamento</BOLD>. Experiência consolidada em ambientes de alta concorrência nos setores de <BOLD>Fintech, E-commerce e Logística</BOLD>. Amplo domínio de <BOLD>TypeScript, Node.js e Go</BOLD>, atuando fortemente com arquitetura de microsserviços, mensageria e <BOLD>otimização de bancos de dados relacionais e NoSQL</BOLD>.",
     },
     'en-US': {
         summaryTitle: "PROFESSIONAL SUMMARY",
-        summary: "Software Engineer with extensive experience in the technology sector, focused on backend development and systems integration architecture. Specialist in building, maintaining, and refactoring robust REST APIs and asynchronous data pipelines. Solid expertise in high-concurrency transactional environments, handling event-driven architectures, webhooks, and optimization of relational and NoSQL databases. Strong theoretical foundation focused on delivering highly scalable, secure, and well-documented solutions.",
+        summary: "<BOLD>Software Engineer</BOLD> with over 8 years of experience in application development and <BOLD>distributed systems architecture</BOLD>. Specialist in designing and scaling <BOLD>RESTful and GraphQL APIs</BOLD>, cross-platform integrations, and <BOLD>high-throughput asynchronous data pipelines</BOLD>. Proven track record in high-concurrency environments across <BOLD>Fintech, E-commerce, and Logistics</BOLD> sectors. Strong expertise in <BOLD>TypeScript, Node.js, and Go</BOLD>, with a focus on microservices architecture, messaging systems, and <BOLD>large-scale database optimization</BOLD>.",
     }
 };

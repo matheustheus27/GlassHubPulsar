@@ -1,5 +1,5 @@
 /**
- * Wraps content and a title within a cohesive Glass Card
+ * Envelopa um conteúdo e título dentro de um Glass Card coeso
  */
 module.exports = function cardTemplate(title, contentHtml) {
   return `

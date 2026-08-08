@@ -1,19 +1,21 @@
-const BlockFactory = require("./layout/BlockFactory");
-const LayoutEngine = require("./layout/LayoutEngine");
+const BlockFactory = require("../layout/BlockFactory");
+const LayoutEngine = require("../layout/LayoutEngine");
 
-class ResumeBuilder {
-  static build(resume) {
+class ResumeBuilderService {
+  static build(resume, options = {}) {
     const settings = resume.settings || {};
+    const debug = options.debug || false;
     const langBase = settings.language || "pt";
     const cleanLang = langBase.split("-")[0];
-    
+
     const p = resume.personal?.personal || {};
     const summaryData = resume.summary || {};
     const skillsData = resume.skills || {};
     const experienceData = resume.experiences || {};
     const educationData = resume.education || {};
+    const projectsData = resume.projects || {};
 
-    // 1. Feeds the sequential block queue for calculating virtual pixels
+    // 1. Feed the sequential block queue for virtual pixel calculation
     const blocks = [];
 
     if (summaryData.summary) {
@@ -36,19 +38,27 @@ class ResumeBuilder {
       });
     }
 
-    // 2. Run the gear with a calibration parameter of 1000px if not defined in .env
-    const engine = new LayoutEngine(parseInt(process.env.PARAMETER_PAGE_WIDTH, 10) || 1000);
+    if (Array.isArray(projectsData.projects)) {
+      projectsData.projects.forEach((proj) => {
+        blocks.push(BlockFactory.createProjects(proj));
+      });
+    }
+
+    // 2. Use dynamic page height, calibrated from actual A4 layout
+    const pageHeight = options.pageHeight || this.calculatePageHeight(settings);
+    const engine = new LayoutEngine(pageHeight, debug);
     const calculatedPages = engine.build(blocks);
 
     const headerHtml = this.header(p, settings);
-    
+
     let isExperienceRenderedBefore = false;
     let isEducationRenderedBefore = false;
+    let isProjectsRenderedBefore = false;
 
-    // 3. HTML Builder by Physical Sheet
+    // 3. HTML builder per physical sheet
     const pagesHtml = calculatedPages.map((page, index) => {
       const pageHeader = index === 0 ? headerHtml : "";
-      
+
       let sectionsHtml = "";
       let currentType = null;
       let activeGroupHtml = "";
@@ -60,17 +70,17 @@ class ResumeBuilder {
             activeGroupHtml = "";
           }
           currentType = block.type;
-          
+
           let sectionTitle = "";
-          
+
           if (block.type === "summary") {
             sectionTitle = summaryData.title;
           }
-          
+
           if (block.type === "skills") {
             sectionTitle = skillsData.title;
           }
-          
+
           if (block.type === "experience") {
             if (isExperienceRenderedBefore) {
               sectionTitle = `${experienceData.title} <em>(${cleanLang === 'pt' ? 'Continuação' : 'Continued'})</em>`;
@@ -79,7 +89,7 @@ class ResumeBuilder {
               isExperienceRenderedBefore = true;
             }
           }
-          
+
           if (block.type === "education") {
             if (isEducationRenderedBefore) {
               sectionTitle = `${educationData.title} <em>(${cleanLang === 'pt' ? 'Continuação' : 'Continued'})</em>`;
@@ -88,10 +98,19 @@ class ResumeBuilder {
               isEducationRenderedBefore = true;
             }
           }
-          
+
+          if (block.type === "projects") {
+            if (isProjectsRenderedBefore) {
+              sectionTitle = `${projectsData.title} <em>(${cleanLang === 'pt' ? 'Continuação' : 'Continued'})</em>`;
+            } else {
+              sectionTitle = projectsData.title;
+              isProjectsRenderedBefore = true;
+            }
+          }
+
           activeGroupHtml += `<div class="section-title">${sectionTitle}</div>`;
         }
-        
+
         activeGroupHtml += block.html;
       });
 
@@ -122,8 +141,27 @@ class ResumeBuilder {
     `;
   }
 
+  static calculatePageHeight(settings = {}) {
+    const pagePaddingTop = 22; // mm
+    const pagePaddingBottom = 22; // mm
+    const pagePaddingLeft = 18; // mm
+    const pagePaddingRight = 18; // mm
+
+    const a4HeightMm = 297;
+    const a4WidthMm = 210;
+
+    const contentHeightMm = a4HeightMm - pagePaddingTop - pagePaddingBottom;
+    const contentWidthMm = a4WidthMm - pagePaddingLeft - pagePaddingRight;
+
+    const pxPerMm = 3.7795275591;
+    const contentHeightPx = contentHeightMm * pxPerMm;
+    const contentWidthPx = contentWidthMm * pxPerMm;
+
+    return Math.round(contentHeightPx);
+  }
+
   static styles(s) {
-    // Provides fallbacks to prevent errors when reading undefined properties
+    // Garante fallbacks para evitar erros de leitura de propriedades indefinidas
     const card = s.card || { borderColor: 'transparent', backgroundColor: 'transparent' };
     const title = s.title || { primary: {}, secondary: {} };
     const subtitle = s.subtitle || { primary: {}, secondary: {} };
@@ -268,19 +306,19 @@ class ResumeBuilder {
   static header(p, s) {
     const card = s.card || {};
     const meta = s.meta || {};
-    
+
     const contactsHtml = (p.contact || []).map(c => {
       let icon = "🔗";
-      if (c.link.includes("mailto")) icon = "✉️";
-      if (c.link.includes("wa.me") || c.link.includes("phone")) icon = "📞";
-      if (c.link.includes("github")) icon = "🐙";
-      if (c.link.includes("linkedin")) icon = "💼";
+      if (c.link.includes("mailto")) icon = c.icon || "✉️";
+      if (c.link.includes("wa.me") || c.link.includes("phone")) icon = c.icon || "📞";
+      if (c.link.includes("github")) icon = c.icon || "🐙";
+      if (c.link.includes("linkedin")) icon = c.icon || "💼";
 
       return `<a href="${c.link}" target="_blank">${icon} ${c.title}</a>`;
     }).join("");
 
-    const locationHtml = p.location 
-      ? `<a href="${p.location.link}" target="_blank">${p.location.title.includes("📍") ? "" : "📍 "}${p.location.title}</a>` 
+    const locationHtml = p.location
+      ? `<a href="${p.location.link}" target="_blank">${p.location.icon || "📍"} ${p.location.title}</a>`
       : "";
 
     return `
@@ -294,6 +332,61 @@ class ResumeBuilder {
       </header>
     `;
   }
+
+  static debugPagination(resume) {
+    const settings = resume.settings || {};
+
+    // 1. Instantiate the blocks using BlockFactory with the actual height estimates
+    const blocks = [];
+
+    if (resume.summary?.summary) {
+      blocks.push(BlockFactory.createSummary(resume.summary));
+    }
+
+    if (resume.skills?.skills) {
+      blocks.push(BlockFactory.createSkills(resume.skills, settings));
+    }
+
+    if (Array.isArray(resume.experiences?.experiences)) {
+      resume.experiences.experiences.forEach((exp) => {
+        blocks.push(BlockFactory.createExperience(exp, settings));
+      });
+    }
+
+    if (Array.isArray(resume.education?.education)) {
+      resume.education.education.forEach((edu) => {
+        blocks.push(BlockFactory.createEducation(edu, settings));
+      });
+    }
+
+    if (Array.isArray(resume.projects?.projects)) {
+      resume.projects.projects.forEach((proj) => {
+        blocks.push(BlockFactory.createProjects(proj));
+      });
+    }
+
+    // 2. Calculate the usable height A4
+    const pageHeight = this.calculatePageHeight(settings);
+
+    // 3. Runs the engine with debug logging enabled
+    const engine = new LayoutEngine(pageHeight, true);
+    const pages = engine.build(blocks);
+
+    return {
+      pageHeightPx: pageHeight,
+      totalPages: pages.length,
+      blocksCount: blocks.length,
+      pagesSummary: pages.map((page, index) => ({
+        pageNumber: index + 1,
+        totalHeightPx: page.totalHeight,
+        remainingSpacePx: pageHeight - page.totalHeight,
+        blocks: page.sections.map(s => ({
+          type: s.type,
+          estimatedHeightPx: s.height
+        }))
+      }))
+    };
+  }
 }
 
-module.exports = ResumeBuilder;
+module.exports = ResumeBuilderService;

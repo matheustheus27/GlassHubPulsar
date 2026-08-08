@@ -14,7 +14,6 @@ export function ExperienceMeta({ company, date, role, children, style }: Experie
       {/* Header Row */}
       <div className="flex items-center justify-between w-full">
         <h3 className="text-[11pt] font-bold text-inherit">{company}</h3>
-        {/* The date is formatted with the configured font style, size, and weight (bold) */}
         <span style={style} className="text-[10pt] opacity-90">{date}</span>
       </div>
       

@@ -1,4 +1,5 @@
-import { PersonalDetails, SummaryDetails, SkillsDetails, ExperienceDetails, EducationDetails } from './resumeType';
+import { PersonalDetails, SummaryDetails, SkillsDetails, ExperienceDetails, EducationDetails, ProjectDetails } from './resumeType';
+import { CoverLetterDetails } from './coverLetterType';
 
 export type Locale = 'pt-BR' | 'en-US';
 
@@ -8,4 +9,6 @@ export interface TranslationDict {
   skillsDetails: SkillsDetails;
   experienceDetails: ExperienceDetails;
   educationDetails: EducationDetails;
+  projectDetails: ProjectDetails;
+  coverLetterDetails: CoverLetterDetails;
 }

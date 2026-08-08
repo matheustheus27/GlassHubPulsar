@@ -1,9 +1,4 @@
-export interface FontStyleDTO {
-  fontType: string;
-  fontSize: string;
-  fontColor: string;
-  fontWeight?: string;
-}
+import {FontStyleDTO} from "./FontStyleDTO";
 
 export interface ResumeSettings {
   language: string;
@@ -13,7 +8,7 @@ export interface ResumeSettings {
     backgroundColor: string;
   };
   title: {
-    primary: FontStyleDTO;   // Candidate's first name
+    primary: FontStyleDTO;   // Candidate's name (Header)
     secondary: FontStyleDTO; // Macro section titles (e.g., PROFESSIONAL SUMMARY)
   };
   subtitle: {
@@ -24,7 +19,7 @@ export interface ResumeSettings {
     primary: FontStyleDTO;   // Companies / Academic Organizations
     secondary: FontStyleDTO; // Long descriptions / Bullets
   };
-  meta: FontStyleDTO;        // Contact information, location, and dates/time periods
+  meta: FontStyleDTO;        // Contact information, location, and time periods/dates
   chip: FontStyleDTO & {
     backgroundColor: string;
     borderColor: string;
@@ -35,6 +30,7 @@ export interface ResumeSettings {
 export interface ContactItem {
   title: string;
   link: string;
+  icon: string;
 }
 
 export interface PersonalItem {
@@ -63,6 +59,12 @@ export interface EducationItem {
   description: string;
 }
 
+export interface ProjectItem {
+  title: string;
+  role: string;
+  bullets: Array<string>;
+}
+
 export interface ResumeDTO {
   settings: ResumeSettings;
   personal: {
@@ -84,5 +86,9 @@ export interface ResumeDTO {
   education: {
     title: string;
     education: Array<EducationItem>;
+  };
+  projects: {
+    title: string;
+    projects: Array<ProjectItem>;
   };
 }

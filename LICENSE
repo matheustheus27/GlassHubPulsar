@@ -1,0 +1,51 @@
+# LICENSE / LICENÇA - GLASSMORPHIC PROFESSIONAL RESUME
+
+[ENGLISH VERSION]
+
+Copyright (c) 2026 Matheus Thiago de Souza Ferreira. All rights reserved.
+
+Author Identification & Jurisdiction:
+
+- Author: Matheus Thiago de Souza Ferreira
+- Nationality: Brazilian
+- Applicable Law: Brazilian Copyright Law (Lei nº 9.610/1998) and International Copyright Treaties (Berne Convention, Universal Copyright Convention, and WIPO Copyright Treaty).
+
+This software ecosystem ("Glassmorphic Professional Resume - Dynamic CV & Cover Letter Engine") is provided under a proprietary, source-available, non-commercial license. Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to view, download, run, study, analyze for educational purposes, and modify the source code strictly for personal or educational use, subject to the following strict conditions:
+
+1. COMMERCIAL USE PROHIBITION: The sale, rental, leasing, sublicensing, distribution for profit, commercial SaaS hosting, deployment as a paid service, embedding into commercial platforms, or any form of direct or indirect commercial exploitation of this software, its frontend/backend source code, layout engine, PDF export logic, modifications, Docker images, or derivative works is expressly and strictly prohibited worldwide.
+
+2. PERSONAL USE & MODIFICATION ALLOWED: You are freely permitted to clone, run locally, customize templates, adjust styles, modify code, and export your personal Resumes (CVs) and Cover Letters for job application purposes, career presentation, or educational learning.
+
+3. ATTRIBUTION AND COPYRIGHT RETENTION: All original copyrights, design patterns, and moral rights remain exclusively and fully with the initial author (Matheus Thiago de Souza Ferreira). Any public redistribution, fork, sharing, or reference to this project or parts of it must include this original license notice in its entirety and prominently credit the original author by name and official repository link.
+
+4. CONTRIBUTIONS AND DEVELOPMENT CONTROLS: Direct code contributions (Pull Requests) to the main repository are explicitly disabled and rejected. The community is invited to contribute exclusively via technical issue reporting, architectural suggestions, and conceptual feedback through GitHub Issues and Discussions. No intellectual property transfer from outside contributors is permitted within the official codebase.
+
+5. FUTURE ARCHITECTURE & EVOLUTION: The author reserves the absolute right, in future versions or modules, to modify the licensing model, close specific components, or integrate the code with proprietary SaaS services. Reverse engineering, extraction, or commercial unauthorized redistribution of any core layouts, PDF engine algorithms, or server services associated with this project is strictly prohibited under international intellectual property frameworks.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+===============================================================================
+
+[VERSÃO EM PORTUGUÊS]
+
+Copyright (c) 2026 Matheus Thiago de Souza Ferreira. Todos os direitos reservados.
+
+Identificação do Autor e Jurisdição:
+
+- Autor: Matheus Thiago de Souza Ferreira
+- Nacionalidade: Brasileiro
+- Legislação Aplicável: Lei de Direitos Autorais Brasileira (Lei nº 9.610/1998) e Tratados Internacionais de Direitos Autorais (Convenção de Berna, Convenção Universal sobre o Direito de Autor e Tratado da OMPI sobre Direitos Autorais).
+
+Este ecossistema de software ("Glassmorphic Professional Resume - Dynamic CV & Cover Letter Engine") é fornecido sob uma licença proprietária de código visível (source-available) e não comercial. Por meio deste documento, concede-se permissão gratuita a qualquer pessoa que obtenha uma cópia deste software e arquivos de documentação associados para visualizar, baixar, executar, estudar, analisar para fins educacionais e modificar o código-fonte para uso estritamente pessoal ou educacional, sujeita às seguintes condições estritas:
+
+1. PROIBIÇÃO DE COMERCIALIZAÇÃO: É expressamente proibida a venda, aluguel, locação, sublicenciamento, distribuição com fins lucrativos, hospedagem como serviço pago (SaaS), implantação comercial, incorporação em produtos/plataformas comerciais ou qualquer forma de exploração comercial direta ou indireta deste software, de seu código-fonte (frontend/backend), motor de layouts, lógica de geração de PDF, modificações, imagens Docker ou trabalhos derivados, em âmbito mundial.
+
+2. USO PESSOAL E MODIFICAÇÃO PERMITIDOS: É totalmente permitido clonar, executar localmente, customizar templates, ajustar estilos, modificar o código e exportar seus currículos pessoais e cartas de apresentação para candidaturas de emprego, apresentação profissional ou aprendizado acadêmico.
+
+3. RETENÇÃO DE DIREITOS E ATRIBUIÇÃO: Todos os direitos autorais originais, padrões de design e direitos morais pertencem integralmente e exclusivamente ao autor inicial (Matheus Thiago de Souza Ferreira). Qualquer redistribuição pública, fork, compartilhamento ou referência a este software ou partes dele deve, obrigatoriamente, incluir este aviso de licença original na íntegra e mencionar o autor original de forma clara, visível e nominal, acompanhado do link do repositório oficial.
+
+4. CONTROLE DE CONTRIBUIÇÕES E DESENVOLVIMENTO: O recebimento de Pull Requests (PRs) e contribuições diretas de código no repositório oficial está explicitamente desativado e rejeitado. A comunidade está autorizada a contribuir exclusivamente por meio do relato de falhas técnicas (Issues), sugestões de arquitetura e debates conceituais via GitHub Issues e Discussions. Nenhuma transferência de propriedade intelectual externa de código é permitida no repositório oficial.
+
+5. EVOLUÇÃO E NÚCLEO PROPRIETÁRIO: O autor reserva-se o direito absoluto de, em versões ou módulos futuros, alterar o modelo de licenciamento, fechar componentes específicos ou integrar o código a serviços proprietários. Fica estritamente proibida a engenharia reversa, extração de código ou redistribuição comercial não autorizada de quaisquer módulos de layout ou serviços do motor de PDF, sob as proteções da legislação de propriedade intelectual nacional e internacional.
+
+O SOFTWARE É FORNECIDO "COMO ESTÁ", SEM GARANTIA DE QUALQUER TIPO, EXPRESSA OU IMPLÍCITA, INCLUINDO, MAS NÃO SE LIMITANDO ÀS GARANTIAS DE COMERCIALIZAÇÃO, ADEQUAÇÃO A UM PROPÓSITO ESPECÍFICO E NÃO INFRAÇÃO. EM NENHUM CASO OS AUTORES OU DETENTORES DE DIREITOS AUTORAIS SERÃO RESPONSÁVEIS POR QUALQUER REIVINDICAÇÃO, DANOS OU OUTRA RESPONSABILIDADE, SEJA EM AÇÃO DE CONTRATO, ATO ILÍCITO OU DE OUTRA FORMA, DECORRENTE DE, FORA OU EM CONEXÃO COM O SOFTWARE OU O USO OU OUTRAS NEGOCIAÇÕES NO SOFTWARE.

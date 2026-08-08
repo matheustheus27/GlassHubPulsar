@@ -49,3 +49,8 @@ export function GetResumeLabel(langCode: LanguageCode): string {
   const lang = Languages.find(l => l.code === langCode);
   return lang ? lang.resume : "Resume";
 }
+
+export function GetCoverLabel(langCode: LanguageCode): string {
+  const lang = Languages.find(l => l.code === langCode);
+  return lang ? lang.cover : "Cover_Letter";
+}

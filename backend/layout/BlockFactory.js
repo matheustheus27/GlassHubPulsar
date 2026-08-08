@@ -6,6 +6,8 @@ const summaryTemplate = require(path.resolve(__dirname, "../templates/summaryTem
 const skillsTemplate = require(path.resolve(__dirname, "../templates/skillsTemplate.js"));
 const experienceTemplate = require(path.resolve(__dirname, "../templates/experienceTemplate.js"));
 const educationTemplate = require(path.resolve(__dirname, "../templates/educationTemplate.js"));
+const projectTemplate = require(path.resolve(__dirname, "../templates/projectTemplate.js"));
+const coverTemplate = require(path.resolve(__dirname, "../templates/coverTemplate.js"));
 
 class BlockFactory {
     static createSummary(summaryData) {
@@ -33,6 +35,20 @@ class BlockFactory {
         return LayoutBlock.education(
             educationTemplate({ edu, settings }),
             HeightEstimator.estimateEducation(edu)
+        );
+    }
+
+    static createProjects(proj) {
+        return LayoutBlock.projects(
+            projectTemplate({ proj }),
+            HeightEstimator.estimateProjects(proj)
+        );
+    }
+
+     static createCover(cover) {
+        return LayoutBlock.cover(
+            coverTemplate({ cover }),
+            HeightEstimator.estimateCover(cover)
         );
     }
 }

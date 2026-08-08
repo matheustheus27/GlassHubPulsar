@@ -1,0 +1,30 @@
+import {CoverLetterDetails} from '../types/coverLetterType';
+
+export const coverLetterDetails: Record<string, CoverLetterDetails> = {
+    "pt-BR": {
+        greeting: "Prezado(a) Recrutador(a),",
+        text: [
+            "Sou <BOLD>Engenheiro de Software com mais de 8 anos de experiência</BOLD> na indústria de tecnologia, focado na <BOLD>construção de ecossistemas backend robustos</BOLD> e arquiteturas de alta disponibilidade.",
+            "Ao longo da minha carreira, liderei iniciativas para a <BOLD>criação de APIs de alta performance</BOLD>, integração de plataformas legadas com microsserviços modernos e automação de fluxos de dados em tempo real. Tenho sólida vivência com bancos de dados relacionais e NoSQL (<BOLD>PostgreSQL, MongoDB e Redis</BOLD>), além de mensageria assíncrona com RabbitMQ e Kafka.",
+            "Com base técnica construída em <BOLD>TypeScript, Node.js e Go</BOLD>, alio uma sólida formação acadêmica em Ciência da Computação à aplicação prática de <BOLD>padrões de projeto (SOLID, Clean Architecture)</BOLD> e cultura DevOps através de <BOLD>Docker e pipelines automatizados de CI/CD</BOLD>.",
+            "Meu objetivo principal é alinhar decisões arquiteturais às necessidades estratégicas do negócio, entregando <BOLD>sistemas resilientes, código limpo e soluções eficientes</BOLD> para times ágeis.",
+            "Estou em busca de novas oportunidades onde possa agregar valor técnico e colaborar diretamente para o crescimento da equipe.",
+            "Agradeço pela atenção e coloco-me à disposição para um bate-papo detalhado sobre minha trajetória profissional."
+        ],
+        signature: "Alexandre Silva Oliveira",
+        valediction: "Atenciosamente,"
+    },
+    "en-US": {
+        greeting: "Dear Hiring Manager,",
+        text: [
+            "I am a <BOLD>Software Engineer with over 8 years of experience</BOLD> in the technology industry, focusing on <BOLD>building robust backend ecosystems</BOLD> and high-availability architectures.",
+            "Throughout my career, I have led initiatives to <BOLD>design high-performance APIs</BOLD>, integrate legacy systems with modern microservices, and automate real-time data workflows. I have extensive experience with relational and NoSQL databases (<BOLD>PostgreSQL, MongoDB, and Redis</BOLD>), as well as asynchronous messaging with RabbitMQ and Kafka.",
+            "Leveraging a strong foundation in <BOLD>TypeScript, Node.js, and Go</BOLD>, I combine my Computer Science background with practical applications of <BOLD>design patterns (SOLID, Clean Architecture)</BOLD> and DevOps culture through <BOLD>Docker and automated CI/CD pipelines</BOLD>.",
+            "My primary focus is to align architectural decisions with strategic business goals, delivering <BOLD>resilient systems, clean code, and scalable solutions</BOLD> within agile teams.",
+            "I am seeking new opportunities where I can apply my technical leadership and contribute meaningfully to the team's goals.",
+            "Thank you for your time and consideration. I welcome the opportunity for an interview to further discuss my background."
+        ],
+        signature: "Alexandre Silva Oliveira",
+        valediction: "Sincerely,"
+    }
+};

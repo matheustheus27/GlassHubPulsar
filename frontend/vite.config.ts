@@ -6,14 +6,14 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [
     react(),
-    tailwindcss(), // The official v4 plugin handles everything natively
+    tailwindcss(), // Official v4 plugin handling everything natively
   ],
   resolve: {
     alias: {
-      // Creates the @ shortcut to the src folder
+      // Create @ shortcut for src folder
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // Maintains support for the asset file types you need
+  // Maintain support for asset file types you need
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

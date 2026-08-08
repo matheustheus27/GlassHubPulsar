@@ -5,34 +5,34 @@ export const experienceDetails: Record<string, ExperienceDetails> = {
         experienceTitle: "EXPERIÊNCIA PROFISSIONAL",
         experiences: [
             {
-                company: "TechCorp Soluções Globais",
+                company: "Nexus Tech Solutions",
+                position: "Engenheiro de Software Senior",
+                period: "Jan 2023 – Presente",
+                bullets: [
+                    "Liderança técnica na arquitetura de <BOLD>microsserviços escaláveis</BOLD>, processando milhões de requisições diárias com foco em baixa latência.",
+                    "Desenvolvimento de integrações complexas com APIs de pagamentos e parceiros externos, garantindo <BOLD>transações financeiras idempotentes e seguras</BOLD>.",
+                    "Otimização de consultas em bancos <BOLD>PostgreSQL e Redis</BOLD>, reduzindo o tempo médio de resposta dos endpoints mais críticos em 40%.",
+                    "Elaboração de <BOLD>especificações técnicas e diagramas de arquitetura</BOLD> (C4 Model) para apoiar a evolução do ecossistema do produto."
+                ]
+            },
+            {
+                company: "CloudData Systems",
                 position: "Desenvolvedor Backend Pleno",
-                period: "Jan 2025 – Presente",
+                period: "Mar 2020 – Dez 2022",
                 bullets: [
-                    "Responsável pela engenharia de rotas e sincronização distribuída de dados entre sistemas ERP legados e plataformas externas parceiras.",
-                    "Desenvolvimento e manutenção de integrações críticas orientadas a microsserviços, gerenciando fluxos de autenticação dinâmica (OAuth2), conciliação financeira e tratamento de falhas transacionais.",
-                    "Otimização de consultas, rotinas de concorrência concorrente e refatoração de queries complexas em ambientes relacionais de grande escala.",
-                    "Criação e padronização de documentações técnicas detalhadas das APIs internas sob o padrão OpenAPI/Swagger para consumo de parceiros."
+                    "Atuação na sustentação e evolução de plataformas de e-commerce utilizando <BOLD>Node.js, Express e TypeScript</BOLD>.",
+                    "Migração de serviços monolíticos para arquiteturas <BOLD>orientadas a eventos (Event-Driven Architecture)</BOLD> utilizando RabbitMQ.",
+                    "Implementação de sistemas de cache distribuído e mecanismos de resiliência com <BOLD>Circuit Breaker e Retry policies</BOLD>.",
+                    "Criação e manutenção de automações e contêineres utilizando <BOLD>Docker, Kubernetes e GitHub Actions</BOLD>."
                 ]
             },
             {
-                company: "LogiSystems Logística Avançada",
-                position: "Desenvolvedor Backend Júnior / Estagiário",
-                period: "Mar 2022 – Dez 2024",
+                company: "Alpha Digital Lab",
+                position: "Desenvolvedor Full-Stack",
+                period: "Jun 2017 – Fev 2020",
                 bullets: [
-                    "Atuação no desenvolvimento core de sistemas de rastreamento de cargas e comprovação eletrônica de entregas em tempo real.",
-                    "Refatoração de rotinas legadas e acopladas aplicando padrões de projeto modernos como Domain-Driven Design (DDD) leve, Services e Repositories, minimizando gargalos de performance.",
-                    "Implementação e monitoramento de webhooks e estratégias de polling persistente para sincronização contínua de status operacionais.",
-                    "Gerenciamento e persistência de dados em ambientes híbridos usando bancos relacionais para dados ACID e NoSQL para auditoria de payloads e logs brutos."
-                ]
-            },
-            {
-                company: "DevStudio Enterprise",
-                position: "Desenvolvedor de Software Independente",
-                period: "Jan 2021 – Jan 2022",
-                bullets: [
-                    "Liderança técnica no escopo de lógica de programação estruturada e arquitetura de componentes reutilizáveis para aplicações interativas comerciais.",
-                    "Coordenação direta de pequenos times utilizando metodologias ágeis (Scrum) e divisão sistemática de entregas técnicas."
+                    "Desenvolvimento de aplicações web completas e reativas utilizando <BOLD>React no frontend e Node.js no backend</BOLD>.",
+                    "Modelagem de estruturas de dados relacionais em <BOLD>MySQL</BOLD> e implementação de ORMs para abstração segura de consultas."
                 ]
             }
         ]
@@ -41,34 +41,34 @@ export const experienceDetails: Record<string, ExperienceDetails> = {
         experienceTitle: "PROFESSIONAL EXPERIENCE",
         experiences: [
             {
-                company: "TechCorp Global Solutions",
+                company: "Nexus Tech Solutions",
+                position: "Senior Software Engineer",
+                period: "Jan 2023 – Present",
+                bullets: [
+                    "Technical lead for <BOLD>scalable microservices architecture</BOLD>, processing millions of daily requests with a focus on low latency.",
+                    "Engineered complex integrations with payment gateways and third-party APIs, ensuring <BOLD>idempotent and secure financial transactions</BOLD>.",
+                    "Optimized database queries in <BOLD>PostgreSQL and Redis</BOLD>, reducing response latency on critical endpoints by 40%.",
+                    "Authored detailed <BOLD>technical specifications and architecture diagrams</BOLD> (C4 Model) to support product scaling."
+                ]
+            },
+            {
+                company: "CloudData Systems",
                 position: "Mid-level Backend Developer",
-                period: "Jan 2025 – Present",
+                period: "Mar 2020 – Dec 2022",
                 bullets: [
-                    "Responsible for route engineering and distributed data synchronization between legacy ERP systems and external cloud platforms.",
-                    "Developing and maintaining critical microservice-oriented integrations, managing dynamic authentication flows (OAuth2), financial reconciliation, and transactional error handling.",
-                    "Optimizing database operations, handling high-concurrency race conditions, and refactoring complex queries in large-scale environments.",
-                    "Creating and standardizing comprehensive technical documentation for internal APIs using OpenAPI/Swagger guidelines."
+                    "Maintained and expanded high-traffic e-commerce platforms using <BOLD>Node.js, Express, and TypeScript</BOLD>.",
+                    "Migrated monolithic services into <BOLD>Event-Driven Architectures</BOLD> leveraging RabbitMQ for asynchronous processing.",
+                    "Implemented distributed caching mechanisms and fault-tolerance patterns using <BOLD>Circuit Breakers and Retry policies</BOLD>.",
+                    "Built and maintained containerized environments using <BOLD>Docker, Kubernetes, and GitHub Actions</BOLD>."
                 ]
             },
             {
-                company: "LogiSystems Logistics",
-                position: "Junior Backend Developer / Intern",
-                period: "Mar 2022 – Dec 2024",
+                company: "Alpha Digital Lab",
+                position: "Full-Stack Developer",
+                period: "Jun 2017 – Feb 2020",
                 bullets: [
-                    "Contributed to core product development for real-time fleet tracking and digital proof-of-delivery applications.",
-                    "Refactored tightly coupled legacy systems using modern design patterns like lightweight Domain-Driven Design (DDD), Services, and Repositories to scale down bottlenecks.",
-                    "Implemented and monitored high-availability webhooks and custom polling mechanisms for continuous operational status syncing.",
-                    "Modeled and managed data persistence across hybrid database stacks, leveraging transactional stores and NoSQL repositories for audit trailing."
-                ]
-            },
-            {
-                company: "DevStudio Enterprise",
-                position: "Independent Software Developer",
-                period: "Jan 2021 – Jan 2022",
-                bullets: [
-                    "Technical execution regarding application logic flow and architecture of modular reusable entities for commercial tools.",
-                    "Coordinated sprint delivery metrics using agile methodologies and feature mapping frameworks."
+                    "Developed end-to-end web applications featuring <BOLD>React on the frontend and Node.js on the backend</BOLD>.",
+                    "Designed relational database schemas in <BOLD>MySQL</BOLD> and integrated ORM frameworks for safe data persistence."
                 ]
             }
         ]

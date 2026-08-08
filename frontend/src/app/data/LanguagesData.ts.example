@@ -5,6 +5,7 @@ export interface LanguageOption {
   label: string;
   flag: string;
   resume: string;
+  cover: string;
 }
 
 export const Languages: LanguageOption[] = [
@@ -13,11 +14,13 @@ export const Languages: LanguageOption[] = [
     label: 'Português (Brasil)',
     flag: '🇧🇷',
     resume: "Currículo",
+    cover: "Carta de Apresentação"
   },
   {
     code: 'en-US',
     label: 'English (US)',
     flag: '🇺🇸',
     resume: "Resume",
+    cover: "Cover Letter"
   },
 ];

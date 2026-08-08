@@ -3,7 +3,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: cv_frontend_dev
+    container_name: document-webpage-client
     ports:
       - "5173:5173"
     volumes:
@@ -13,20 +13,24 @@ services:
       - CHOKIDAR_USEPOLLING=true
     command: >
       sh -c "
-      for f in PersonalData SummaryData SkillsData ExperienceData EducationData SettingsData TranslationsData LanguagesData; do
+      for f in PersonalData SummaryData SkillsData ExperienceData EducationData SettingsData TranslationsData LanguagesData CoverLetterData ProjectData; do
         if [ ! -f src/app/data/$$f.ts ] && [ -f src/app/data/$$f.ts.example ]; then
           cp src/app/data/$$f.ts.example src/app/data/$$f.ts;
         fi;
       done && npm run dev -- --host
       "
+    depends_on:
+      - backend
     networks:
-      - cv_network
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "react", "service": "frontend"}]'
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    container_name: cv_backend_dev
+    container_name: document-export-server
     ports:
       - "3001:3001"
     volumes:
@@ -34,10 +38,30 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-    command: sh -c "if [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi && nodemon server.js"
+    command: sh -c "npm run dev"
     networks:
-      - cv_network
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "backend"}]'
+
+  datadog:
+    image: gcr.io/datadoghq/agent:7
+    container_name: datadog-agent
+    environment:
+      - DD_API_KEY=${DD_API_KEY:-sua_api_key_aqui}
+      - DD_SITE=${DD_SITE:-datadoghq.com}
+      - DD_LOGS_ENABLED=true
+      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+      - DD_PROCESS_AGENT_ENABLED=true
+      - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc/:/host/proc/:ro
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - doc_network
 
 networks:
-  cv_network:
+  doc_network:
     driver: bridge

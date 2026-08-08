@@ -1,9 +1,9 @@
 export type LanguageCode = 'pt-BR' | 'en-US';
 
 export type FontStyle = {
-    fontType: string;
-    fontSize: string;
-    fontColor: string;
+    fontType?: string;
+    fontSize?: string;
+    fontColor?: string;
     fontWeight?: string; // Added to control the bold formatting of dates and text
 };
 
@@ -24,12 +24,16 @@ export type Settings = {
     };
     caption: {
         primary: FontStyle;   // Companies and Academic Institutions
-        secondary: FontStyle; // Descriptive Text and Bullet Points
+        secondary: FontStyle; // Descriptive text and bullet points
     };
     meta: FontStyle;          // Time Periods / Dates / Location (Now supports fontWeight)
     chip: FontStyle & {
         backgroundColor: string;
         borderColor: string;
+    };
+    cover: {
+        common: FontStyle;    // Common font settings for the cover letter
+        signature: FontStyle; // Signature text (Candidate's Name)
     };
     backgroundColor?: string;
 };

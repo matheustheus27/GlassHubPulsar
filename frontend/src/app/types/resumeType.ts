@@ -27,6 +27,11 @@ export interface EducationDetails {
   educations: Array<EducationItem>;
 }
 
+export interface ProjectDetails {
+  projectTitle: string;
+  projects: Array<ProjectItem>;
+}
+
 export interface LocationItem {
   location: string;
   link: string;
@@ -73,6 +78,13 @@ export interface EducationItem {
   degree: string;
   period: string;
   description: string;
+}
+
+export interface ProjectItem {
+  title: string;
+  description: string;
+  link?: string;
+  bullets: Array<string>;
 }
 
 export interface ContactInfo {

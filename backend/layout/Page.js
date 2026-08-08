@@ -1,9 +1,9 @@
 class Page {
     constructor(maxHeight = 980) {
-        // Usable height of the sheet (A4 minus margins)
+        // Useful page height (A4 minus margins)
         this.maxHeight = maxHeight;
 
-        // Height currently in use
+        // Currently used height
         this.usedHeight = 0;
 
         // Page sections
@@ -11,16 +11,20 @@ class Page {
     }
 
     /**
-     * Checks whether a block fits on the page.
+     * Check if a block fits on the page.
      * @param {number} height
      * @returns {boolean}
      */
-    canFit(height) {
-        return this.usedHeight + height <= this.maxHeight;
+    canFit(height, extraHeight = 0) {
+        return this.usedHeight + height + extraHeight <= this.maxHeight;
+    }
+
+    getLastSectionType() {
+        return this.sections.length > 0 ? this.sections[this.sections.length - 1].type : null;
     }
 
     /**
-     * Add an entire section.
+     * Add a complete section.
      * @param {Object} section
      */
     addSection(section) {
@@ -29,7 +33,7 @@ class Page {
     }
 
     /**
-     * Removes the most recently added section.
+     * Remove the last added section.
      */
     removeLastSection() {
         const removed = this.sections.pop();
@@ -49,14 +53,14 @@ class Page {
     }
 
     /**
-     * Empty page?
+     * Is page empty?
      */
     isEmpty() {
         return this.sections.length === 0;
     }
 
     /**
-     * Reload the page.
+     * Reset the page.
      */
     clear() {
         this.sections = [];

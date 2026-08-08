@@ -1,0 +1,31 @@
+name: "💡 Feature Request / Sugestão de Implementação"
+description: "Propose a new feature or improvement / Sugira uma nova funcionalidade."
+title: "[FEATURE] "
+labels: ["enhancement", "discussion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### [EN] Welcome! / [PT] Bem-vindo!
+        Thank you for helping to improve NativeZipTools. Please note that Pull Requests are disabled. Contributions are driven entirely by your structural feedback here.
+        Obrigado por ajudar a melhorar o NativeZipTools. Note que Pull Requests estão desativados. As contribuições funcionam totalmente através do seu feedback estrutural aqui.
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description / Descrição"
+      description: "Clear and concise description of the proposal. / Descrição clara e concisa da proposta."
+      placeholder: "I suggest implementing..."
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: "Use Case & Motivation / Caso de Uso e Motivação"
+      description: "Why is this feature useful? What problem does it solve? / Por que esta funcionalidade é útil? Qual problema ela resolve?"
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: "References & Base Projects / Referências e Projetos Base"
+      description: "Links to articles, documentation, or repositories demonstrating similar concepts. / Links para artigos, documentações ou repositórios correlatos."

@@ -45,6 +45,24 @@ class LayoutBlock {
         });
     }
 
+    static projects(itemHtml, height) {
+        return new LayoutBlock({
+            type: "projects",
+            html: itemHtml,
+            estimatedHeight: height,
+            repeatSectionTitle: true
+        });
+    }
+
+    static cover(itemHtml, height) {
+        return new LayoutBlock({
+            type: "cover",
+            html: itemHtml,
+            estimatedHeight: height,
+            repeatSectionTitle: true
+        });
+    }
+
     static summary(html, height) {
         return new LayoutBlock({
             type: "summary",

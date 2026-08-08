@@ -11,13 +11,13 @@ export const settingsData: Record<'light' | 'dark', Settings> = {
         title: {
             primary: {
                 fontType: 'Inter, system-ui, sans-serif',
-                fontSize: '26px', // Highlighted main name
+                fontSize: '26px', // Nome principal destacado
                 fontColor: '#0f172a',
                 fontWeight: '700'
             },
             secondary: {
                 fontType: 'Inter, system-ui, sans-serif',
-                fontSize: '15px', // Macro section titles
+                fontSize: '15px', // Títulos das seções macros
                 fontColor: '#0f172a',
                 fontWeight: '700'
             }
@@ -52,9 +52,9 @@ export const settingsData: Record<'light' | 'dark', Settings> = {
         },
         meta: {
             fontType: 'Inter, system-ui, sans-serif',
-            fontSize: '11px',      // Smaller than the actual PDF
+            fontSize: '11px',      // Menor conforme o PDF real
             fontColor: '#334155',
-            fontWeight: '700'     // Bold for dates
+            fontWeight: '700'     // Negrito para as datas
         },
         chip: {
             fontType: 'Inter, system-ui, sans-serif',
@@ -63,6 +63,18 @@ export const settingsData: Record<'light' | 'dark', Settings> = {
             backgroundColor: 'rgba(255, 255, 255, 0.85)',
             borderColor: 'rgba(191, 219, 254, 0.8)',
             fontWeight: '500'
+        },
+        cover: {
+            common: {
+                fontType: 'Inter, system-ui, sans-serif',
+                fontSize: '14px',
+                fontColor: '#0f172a',
+                fontWeight: '400'
+            },
+            signature: {
+                fontColor: '#1e3a8a',
+                fontWeight: '700'
+            }
         },
         backgroundColor: '#F4F8FA'
     },
@@ -119,7 +131,7 @@ export const settingsData: Record<'light' | 'dark', Settings> = {
             fontType: 'Inter, system-ui, sans-serif',
             fontSize: '12px',
             fontColor: '#94a3b8',
-            fontWeight: 'bold' // Bold text for dates in dark mode
+            fontWeight: 'bold' // Negrito para as datas no modo escuro
         },
         chip: {
             fontType: 'Inter, system-ui, sans-serif',
@@ -128,6 +140,18 @@ export const settingsData: Record<'light' | 'dark', Settings> = {
             backgroundColor: '#1e293b',
             borderColor: 'rgba(51, 65, 85, 0.6)',
             fontWeight: '600'
+        },
+        cover: {
+            common: {
+                fontType: 'Inter, system-ui, sans-serif',
+                fontSize: '14px',
+                fontColor: '#fdffff',
+                fontWeight: '400'
+            },
+            signature: {
+                fontColor: '#22d3ee',
+                fontWeight: '700'
+            }
         },
         backgroundColor: '#030712'
     }
