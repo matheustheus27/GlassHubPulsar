@@ -1,0 +1,224 @@
+// Prisma Schema for Glassmorphic Professional Resume
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  name            String
+  passwordHash    String
+  role            Role           @default(USER)
+  is2FAEnabled    Boolean        @default(false)
+  twoFactorSecret String?
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  settings        UserSettings?
+  resumes         ResumeData[]
+  coverLetters    CoverLetterData[]
+  auditLogs       AuditLog[]
+  backgroundJobs  BackgroundJob[]
+  supportTickets  SupportTicket[]
+  notifications   Notification[]
+
+  @@map("users")
+}
+
+model UserSettings {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  viewMode        String   @default("split") // 'split' | 'formOnly' | 'previewOnly'
+  activeTheme     String   @default("dark") // 'dark' | 'light'
+  activeTemplate  String   @default("GlassModern") // 'GlassModern' | 'GlassMinimalist' | 'GlassExecutive' | 'GlassCompact'
+  primaryColor    String   @default("#06b6d4")
+  glassBlur       Int      @default(16)
+  glassOpacity    Float    @default(0.6)
+  defaultLanguage String   @default("pt-BR") // 'pt-BR' | 'en-US'
+  atsScore        Int?     @default(0)
+  atsReport       Json?
+  customStyles    Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model ResumeData {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version         Int      @default(1)
+  language        String   @default("pt-BR")
+  title           String   @default("Curriculum Vitae")
+  personalDetails Json
+  summary         Json
+  skills          Json
+  experiences     Json
+  education       Json
+  projects        Json
+  isCurrent       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, language])
+  @@index([userId, language])
+  @@map("resume_data")
+}
+
+model CoverLetterData {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version         Int      @default(1)
+  language        String   @default("pt-BR")
+  greeting        String
+  text            Json     // array of bullet paragraphs or markdown
+  signature       String
+  valediction     String
+  personalDetails Json
+  isCurrent       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, language])
+  @@index([userId, language])
+  @@map("cover_letter_data")
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userName    String
+  userEmail   String
+  type        String   @default("GENERAL") // 'TECHNICAL_ISSUE' | 'FEATURE_REQUEST' | 'BILLING' | 'ACCOUNT_DELETION' | 'GENERAL'
+  subject     String
+  description String
+  status      String   @default("OPEN") // 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+  assignedTo  String?
+  messages    Json     // Array of { id, sender, senderName, text, timestamp }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model AccountDeletionQueue {
+  id                           String   @id @default(uuid())
+  userId                       String   @unique
+  userEmail                    String
+  userName                     String
+  deletionRequestedAt          DateTime @default(now())
+  scheduledPermanentDeletionAt DateTime
+  recoveryToken                String   @unique
+  status                       String   @default("PENDING_DELETION") // 'PENDING_DELETION' | 'RECOVERED' | 'PERMANENTLY_DELETED'
+  executedByAdmin              String?
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+
+  @@index([status])
+  @@index([scheduledPermanentDeletionAt])
+  @@map("account_deletion_queue")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  resource  String
+  ipAddress String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model SystemMetric {
+  id          String   @id @default(uuid())
+  metricName  String
+  metricValue Float
+  unit        String   @default("ms")
+  dimensions  Json?
+  recordedAt  DateTime @default(now())
+
+  @@index([metricName, recordedAt])
+  @@map("system_metrics")
+}
+
+model SystemExecutionLog {
+  id         String   @id @default(uuid())
+  service    String
+  level      String   @default("INFO")
+  traceId    String?
+  durationMs Float?
+  route      String?
+  statusCode Int?
+  message    String
+  metadata   Json?
+  timestamp  DateTime @default(now())
+
+  @@index([service, level])
+  @@index([timestamp])
+  @@map("system_execution_logs")
+}
+
+model BackgroundJob {
+  id        String    @id @default(uuid())
+  type      String    // 'TRANSLATION' | 'PDF_EXPORT' | 'ATS_ANALYSIS' | 'NOTIFICATION'
+  status    JobStatus @default(PENDING)
+  progress  Int       @default(0)
+  payload   Json
+  result    Json?
+  error     String?
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([type, status])
+  @@map("background_jobs")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO") // 'PDF_READY' | 'ATS_ANALYSIS_COMPLETED' | 'TRANSLATION_COMPLETED' | 'SYSTEM' | 'INFO'
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}

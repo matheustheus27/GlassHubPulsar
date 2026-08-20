@@ -1,4 +1,3 @@
-const cardTemplate = require("./card");
 const TagProcessor = require('../layout/TagProcessor');
 
 module.exports = function summaryTemplate({ summary }) {

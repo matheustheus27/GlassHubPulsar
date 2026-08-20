@@ -1,109 +1,115 @@
 <!-- markdownlint-disable MD033 -->
 
-# 📄 GlassmorphicProfessionalResume - Dynamic CV & Cover Letter Engine
+# 📄 GlassHub Professional Resume - Enterprise Document & AI Engine
 
-A modern, full-stack ecosystem designed to manage, render, and export professional resumes and cover letters dynamically. This project replaces traditional, rigid styling approaches with a decoupled architecture, utilizing a highly customizable frontend and a dedicated backend service exclusively focused on consistent PDF document generation.
-
----
-
-## 🎯 Project Objectives & New Features
-
-* **Dual Document Support:** Manage and export both **Resumes (CVs)** and **Cover Letters** seamlessly from the same application.
-* **Custom Text Formatting Tags:** Integrated a parser (`processInHtml`) allowing custom inline formatting tags (`<BOLD>`, `<ITALIC>`, `<UNDERLINE>`, `<HIGHLIGHT>`, `<STRIKETHROUGH>`) within text strings and JSON/TS data files.
-* **New Projects Section:** Native support for showcasing personal and professional projects in the resume layout, including descriptions, tech stacks, and links.
-* **Autonomous PDF Calibration Engine:** The backend rendering engine automatically calculates element dimensions, viewports, and page splits dynamically, running internal layout validation tests to guarantee perfect visual distribution on output.
-* **User Feedback & Notifications:** Integrated real-time notifications to inform the user of the exact status of PDF generation (success or failure).
-* **Content Abstraction:** Decouple professional data (experiences, skills, projects, cover letter content, contact info) from the presentation layer using modular data schemas.
-* **Internationalization (i18n):** Native support for multiple languages (Portuguese and English) switchable dynamically at runtime.
-* **Rendering Consistency:** Eliminate layout and formatting inconsistencies caused by client-side browser print engines by delegating PDF generation to a controlled server-side Linux environment inside a container.
-* **Development Reactivity:** Full Hot Reload integration across both services, making changes to data, layouts, or server scripts immediately available.
+A modern, production-ready enterprise ecosystem designed to manage, render, analyze, and export executive resumes and cover letters. Built with a decoupled microservice architecture, strict **GlassHub Design System (Atomic Design)**, PostgreSQL relational persistence, BullMQ asynchronous workers, Puppeteer Linux PDF calibration, and hybrid telemetry combining **Datadog APM** and PostgreSQL execution logs.
 
 ---
 
-## 🏷️ Custom Text Formatting Tags & Layout Accuracy
+## 🎯 Architectural Highlights & Capabilities
 
-To keep raw JSON/TS data files clean while supporting rich text formatting, the system implements a unified tag processing logic on both client and server:
+* **Public Landing Page & Gateway:** Luxury landing page at the root route (`/`) explaining the platform, showcasing the 4 Glassmorphic templates, ATS scoring intelligence, and providing a clean modal gateway for login and registration.
+* **GlassHub Design System & Atomic Design:** Multi-layer frosted glass surfaces (`backdrop-filter: blur(20px)`), luminous specular borders, neon glow rings, and WCAG AAA compliant typography.
+* **4 Extensible Resume Themes:** Seamlessly switch between `GlassModern`, `GlassMinimalist`, `GlassExecutive`, and `GlassCompact` without data loss.
+* **Symmetrical Link Balancing Algorithm:** Mathematical bounding-box algorithm balancing contact links dynamically (2x2, 3x2, 1x4) to eliminate orphan widow links in both web previews and PDF exports.
+* **Social & Networking Contacts:** Built-in support for GitHub, LinkedIn, Portfolio Website, Instagram, Facebook, and X (formerly Twitter).
+* **Dedicated Interface i18n Dictionary:** Complete interface internationalization (`uiTranslations.ts`) for Portuguese and English interface translations.
+* **On-Demand International Resume Versions:** Create localized versions of your resume with choice of manual authoring or automated background translation via `worker-translation` (TranslateGemma / Llama 3.2).
+* **Conversational Quick Fill AI & Career Recruiter Assistant:** Context-aware recruiter chat answering specific queries, rewriting bullets, and converting raw text into structured resume fields.
+* **Resume Importer (.PDF & .DOCX):** Intelligent parser extracting candidate profiles from existing Word documents and PDFs directly into structured resume fields using Llama 3.2.
+* **Customer Help & Support Center:** Interactive FAQs, step-by-step user manuals, and ticket desk for technical issues, suggestions, and account deletion.
+* **Real-Time Live Chat with Support Agents:** Instant real-time customer service chat between candidates and admin attendants with live SSE/WebSocket message streaming.
+* **30-Day Soft Account Deletion & Recovery Routine:** Security workflow for account deletion with a 30-day grace period, automated email notifications, single-use recovery tokens, and automated permanent purge routines.
+* **Hybrid Admin Cockpit & Executive PDF Health Reports:** Live dashboard monitoring Datadog APM DogStatsD metrics, PostgreSQL execution traces (`SystemExecutionLog`), BullMQ message queues, support desk tickets, and generating on-demand executive status PDF reports.
+* **Hardened Infrastructure & Nginx Gateway:** Fully orchestrated via Docker Compose with Nginx reverse proxy on port 80, PostgreSQL 16 with persistent named volumes, Redis 7, and Datadog agent.
 
-* **Frontend (`frontend/src/app/services/tagProcessorService.ts`):** Converts inline tags into styled HTML elements for live preview.
-* **Backend (`backend/layout/TagProcessor.js`):** Parses custom tags for HTML PDF templates and provides a `stripTags()` method. This allows the `HeightEstimator` to calculate precise text line wraps and page heights based purely on the visible character length without count bloat from raw tag strings.
+---
 
-### Supported Formatting Tags
+## 🔑 Default Seeded Accounts & Credentials
+
+The platform database seeds the following default accounts upon initialization:
+
+| Account Type | Email | Password | Role & Permissions |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin@glasshub.com` | `AdminPassword123!` | Acesso total ao Admin Cockpit, telemetria híbrida Datadog + PostgreSQL, controle de filas BullMQ e relatórios executivos em PDF. |
+| **Usuário de Teste** | `test@glasshub.com` | `TestPassword123!` | Acesso ao Workspace do usuário com dados completos de currículo pré-configurados no PostgreSQL, editor reativo e live preview. |
+
+> [!NOTE]
+> Novos usuários podem ser criados instantaneamente através do botão **"Criar Conta"** na Landing Page inicial (com confirmação de senha e formulário limpo para preenchimento de dados pessoais).
+
+---
+
+## 🏗️ System Topology & Services
+
+```
+                                  [ Port 80 ]
+                                 ┌────────────┐
+                                 │   NGINX    │ (Reverse Proxy & Security Gateway)
+                                 └─────┬──────┘
+                                       │
+                      ┌────────────────┴────────────────┐
+                      ▼                                 ▼
+             ┌─────────────────┐               ┌─────────────────┐
+             │    Frontend     │               │   Backend API   │
+             │  (Vite + React) │               │    (Express)    │
+             └─────────────────┘               └────────┬────────┘
+                                                        │
+                      ┌────────────────┬────────────────┼────────────────┐
+                      ▼                ▼                ▼                ▼
+              ┌───────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+              │  PostgreSQL   │ │    Redis    │ │   Ollama    │ │   Datadog   │
+              │  (pg_data)    │ │   (Queues)  │ │ (Llama 3.2) │ │   (APM)     │
+              └───────────────┘ └──────┬──────┘ └─────────────┘ └─────────────┘
+                                       │
+                ┌──────────────────────┼──────────────────────┐
+                ▼                      ▼                      ▼
+        ┌───────────────┐      ┌───────────────┐      ┌───────────────┐
+        │ worker-trans  │      │ worker-pdf    │      │ worker-notif  │
+        │ (Translation) │      │ (Puppeteer)   │      │ (Multi-chan)  │
+        └───────────────┘      └───────────────┘      └───────────────┘
+```
+
+---
+
+## 🏷️ Custom Text Formatting Tags
+
+To keep raw data clean while supporting rich inline typography, the platform processes custom formatting tags across both preview and Puppeteer PDF builds:
 
 | Tag | Rendered HTML | Visual Effect |
 | :--- | :--- | :--- |
 | `<BOLD>text</BOLD>` | `<strong>text</strong>` | **Bold text** |
 | `<ITALIC>text</ITALIC>` | `<em>text</em>` | *Italic text* |
 | `<UNDERLINE>text</UNDERLINE>` | `<u>text</u>` | <u>Underlined text</u> |
-| `<HIGHLIGHT>text</HIGHLIGHT>` | `<mark style="...">text</mark>` | <mark style="background-color: rgb(8, 145, 178); padding: 2px 4px; border-radius: 2px;">Highlighted text</mark> |
+| `<HIGHLIGHT>text</HIGHLIGHT>` | `<mark class="...">text</mark>` | <mark style="background-color: rgb(8, 145, 178); padding: 2px 4px; border-radius: 2px;">Highlighted text</mark> |
 | `<STRIKETHROUGH>text</STRIKETHROUGH>` | `<s>text</s>` | ~~Strikethrough text~~ |
 
 ---
 
-## 🏗️ Project Architecture & Directory Structure
+## 🚀 Quick Start with Docker
 
-The project is structured with the frontend application at the core workspace root and the backend isolated in a dedicated subdirectory using a modular, decoupled architecture:
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/matheustheus27/Glassmorphic-Professional-Resume-Template.git
+   cd Glassmorphic-Professional-Resume-Template
+   ```
 
-* **Frontend (`/frontend`):** An interactive, rich user interface built with **React and TypeScript** to manage CV and Cover Letter layouts, dynamic translations, custom styling typography, and export feedback notifications.
-* **Backend (`/backend`):** A dedicated microservice acting as the PDF export engine, structured with:
-  * **Routes:** Endpoints handling incoming HTTP requests.
-  * **Controllers:** Coordinates request processing, document routing, and HTTP responses.
-  * **Services:** Isolated document builders (Resume & Cover Letter) managing Puppeteer browser instances and PDF compilation logic.
-  * **Templates:** Reusable document structures and HTML blueprints used to assemble the final export pages.
-  * **Layouts:** Style rules, grid systems, and structural formatting for physical page alignment and print rendering.
-  * **Tests:** Automated tests to validate layout dimensions, element bounding boxes, and dynamic PDF page generation.
+2. **Initialize environment configuration:**
+   ```bash
+   node scripts/init-env.js
+   ```
 
----
+3. **Start the entire platform:**
+   ```bash
+   docker compose up --build
+   ```
 
-## 📁 Data Customization & Privacy Shield
-
-To protect your personal information (such as real phone numbers, emails, addresses, and employment history) when publishing your fork or repository publicly, the project utilizes an automated **Template Customization Layer**.
-
-All candidate structure models are stored in the **`frontend/src/app/data/`** directory. The real `.ts` production files are automatically ignored by `.gitignore` to prevent data leaks, while public `.ts.example` files are provided as structural templates.
-
-### 👤 Candidate Information Templates
-
-To build your own resume and cover letter, customize the fields inside these structural files:
-
-* **`frontend/src/app/data/PersonalData.ts.example`**: Contains core personal details (Full Name, professional title, location map links, and contact channels like Email, Phone, GitHub, and LinkedIn).
-* **`frontend/src/app/data/SummaryData.ts.example`**: Holds the professional summary or profile pitch paragraph for each supported language.
-* **`frontend/src/app/data/SkillsData.ts.example`**: Defines technical skills categories (e.g., Languages, Frameworks, Databases).
-* **`frontend/src/app/data/ExperienceData.ts.example`**: Stores professional background history, roles, periods, and accomplishment bullet points.
-* **`frontend/src/app/data/ProjectsData.ts.example`**: Holds personal and open-source project details, key achievements, highlights, and repository or live demo links.
-* **`frontend/src/app/data/EducationData.ts.example`**: Contains academic degrees, vocational courses, certifications, and institutional descriptions.
-* **`frontend/src/app/data/CoverLetterData.ts.example`**: Holds template text and variables for generating personalized Cover Letters.
-
-### 🎨 Visual & Layout Settings
-
-* **`src/app/data/SettingsData.ts.example`**: Edit this template to change the color palettes, fonts, font sizes, weights, or container dimensions for both Light and Dark modes.
+4. **Access the application:**
+   - **Public Landing Page & Gateway:** Open `http://localhost` (or `http://localhost:80`)
+   - **Login:** Use `test@glasshub.com` / `TestPassword123!` or `admin@glasshub.com` / `AdminPassword123!`.
+   - **Admin Cockpit:** Access `/admin/cockpit` or log in directly with administrator credentials.
 
 ---
 
-## 🐳 Dockerization & Automated Bootstrap
+## 👨‍💻 Autor & Desenvolvedor
 
-The entire ecosystem is containerized using Docker and calibrated with local volumes. To provide a zero-setup onboarding experience, the orchestration layer handles all file initialization automatically.
-
-### 🔄 Intelligent Initialization Automation
-
-When you execute `docker-compose up`, the multi-stage environment performs the following automated synchronization routines before starting up the dev servers:
-
-1. **Frontend Bootstrapping:** The container scans the `src/app/data/` folder. For every missing production file (e.g., `PersonalData.ts`), it automatically creates a functional clone from its corresponding template (`PersonalData.ts.example`).
-
-Any changes subsequently made to your active data components or backend rendering scripts will trigger an instant Hot Reload in the running container without service interruption.
-
-### Prerequisites
-
-* [Docker](https://docs.docker.com/get-docker/) installed.
-* [Docker Compose](https://docs.docker.com/compose/install/) installed.
-
----
-
-## 🚀 How to Run the Project
-
-You can spin up the entire ecosystem simultaneously using the Docker Compose configuration located at the root of the project.
-
-### 1. Build and Start the Containers
-
-Run the following command to build the images, initialize missing data files from templates, and launch the services in development mode:
-
-```bash
-docker-compose up --build
+Desenvolvido por **[Matheus](https://matheustheus27.github.io/)**

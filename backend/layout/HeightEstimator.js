@@ -1,140 +1,83 @@
 const TagProcessor = require('./TagProcessor');
 
 class HeightEstimator {
-
     static estimateSummary(text = "") {
-        // 116px = Section Title (15px) + Border/Gap (11px) + Card Internal Padding (24px top + 24px bottom) + Block External Margin (42px)
-        // Strip tags before calculating height (tags don't occupy visual space)
         const cleanText = TagProcessor.stripTags(text);
-        return 116 + this.lines(cleanText, 105) * 20;
+        const lineCount = this.lines(cleanText, 90);
+        return Math.round(lineCount * 18);
     }
 
     static estimateSkills(categories = []) {
-        // 116px = Base structure of unified Glass Card (Margins, Section Title, Paddings)
-        let height = 116;
-
+        let totalLinearHeight = 0;
         for (const category of categories) {
-            height += 30; // Subcategory title (Languages, Methodologies, etc.)
-
             const skills = category.items || [];
-            // Simulate flex-wrap: average of 4 badges per physical line in useful A4 width
-            const rows = Math.ceil(skills.length / 4);
-
-            height += rows * 38; // Badge height (28px) + Vertical gap (10px)
+            // In 2 columns (each column ~330px wide), average 3-4 badges per line
+            const rows = Math.max(1, Math.ceil(skills.length / 3.5));
+            totalLinearHeight += 16 + (rows * 24 + 4);
         }
-
-        return height;
+        // Divided across 2 parallel columns
+        const gridHeight = Math.ceil(totalLinearHeight / (categories.length > 1 ? 1.85 : 1));
+        return Math.max(36, gridHeight);
     }
 
-    static estimateExperience(exp) {
-        // 48px = Vertical internal padding of card (.glass-card has 24px top + 24px bottom)
-        let height = 48;
-
-        if (exp.role) height += 22;
-        if (exp.company) height += 22;
-        if (exp.date) height += 20;
+    static estimateExperience(exp = {}) {
+        let height = 28; // Company + Role + Date line
 
         const bullets = exp.bullets || [];
         for (const bullet of bullets) {
-            // At A4 width minus margins, text breaks around 82 characters per line
-            // Strip tags before calculating (they don't occupy visual space)
             const cleanBullet = TagProcessor.stripTags(bullet);
-            height += this.lines(cleanBullet, 82) * 20; 
+            const lineCount = this.lines(cleanBullet, 88);
+            height += Math.round(lineCount * 18) + 3;
         }
 
-        // +20px gap between one employment block and another within the holder
-        return height + 20;
+        return Math.max(36, height);
     }
 
-    static estimateEducation(item) {
-        let height = 48; // Vertical internal padding of card
-
-        if (item.role) height += 22;
-        if (item.company) height += 22;
-        if (item.date) height += 20;
+    static estimateEducation(item = {}) {
+        let height = 28; // School + Degree + Period line
 
         if (item.description) {
-            // Strip tags before calculating (they don't occupy visual space)
             const cleanDescription = TagProcessor.stripTags(item.description);
-            height += this.lines(cleanDescription, 85) * 20;
+            const lineCount = this.lines(cleanDescription, 88);
+            height += Math.round(lineCount * 18) + 3;
         }
 
-        return height + 20;
+        return Math.max(32, height);
     }
 
-    static estimateProjects(proj) {
-        // Base: Card internal padding (24px top + 24px bottom)
-        let height = 48;
+    static estimateProjects(proj = {}) {
+        let height = 28; // Title + Stack line
 
-        // Project title (h3)
-        if (proj.title) height += 22;
-
-        // Project role/description
-        if (proj.role) height += 22;
-
-        // Internal gap between title and role (4px)
-        if (proj.title || proj.role) height += 4;
-
-        // Bullets
         const bullets = proj.bullets || [];
-        for (let i = 0; i < bullets.length; i++) {
-            const bullet = bullets[i];
-            // Each bullet occupies height of lines + padding left of list
-            // Increased from 20px to 24px per line to compensate for browser word-wrap
-            // Strip tags before calculating (they don't occupy visual space)
+        for (const bullet of bullets) {
             const cleanBullet = TagProcessor.stripTags(bullet);
-            height += this.lines(cleanBullet, 82) * 24;
-            // Gap between bullets (5px)
-            if (i < bullets.length - 1) height += 5;
+            const lineCount = this.lines(cleanBullet, 88);
+            height += Math.round(lineCount * 18) + 3;
         }
 
-        // Extra safety gap for flex container
-        height += 14;
-
-        // +20px gap between one project block and another within the holder
-        return height + 20;
+        return Math.max(36, height);
     }
 
-    static estimateCover(cover) {
-        // Base: Card internal padding (24px top + 24px bottom)
-        let height = 48;
+    static estimateCover(cover = {}) {
+        let height = 36;
 
-        // Cover signature
-        if (cover.signature) height += 22;
+        if (cover.signature) height += 20;
+        if (cover.valediction) height += 20;
 
-        // Cover valediction
-        if (cover.valediction) height += 22;
-
-        // Internal gap between signature and valediction (4px)
-        if (cover.signature || cover.valediction) height += 4;
-
-        // Bullets
-        const bullets = cover.bullets || [];
-        for (let i = 0; i < bullets.length; i++) {
-            const bullet = bullets[i];
-            // Each bullet occupies height of lines + padding left of list
-            // Increased from 20px to 24px per line to compensate for browser word-wrap
-            // Strip tags before calculating (they don't occupy visual space)
+        const bullets = cover.bullets || (cover.text ? (Array.isArray(cover.text) ? cover.text : [cover.text]) : []);
+        for (const bullet of bullets) {
             const cleanBullet = TagProcessor.stripTags(bullet);
-            height += this.lines(cleanBullet, 82) * 24;
-            // Gap between bullets (5px)
-            if (i < bullets.length - 1) height += 5;
+            const lineCount = this.lines(cleanBullet, 88);
+            height += Math.round(lineCount * 18) + 6;
         }
 
-        // Extra safety gap for flex container
-        height += 14;
-
-        // +20px gap between one project block and another within the holder
-        return height + 20;
+        return Math.max(50, height);
     }
 
-    static lines(text = "", charsPerLine = 100) {
+    static lines(text = "", charsPerLine = 88) {
         if (!text) return 1;
-
         const baseLines = Math.ceil(text.length / charsPerLine);
-        // Subtle mathematical penalty to compensate for browser 'word-wrap' (long words that jump to next line)
-        const wordWrapPenalty = text.length > 150 ? Math.floor(text.length / 240) : 0;
-
+        const wordWrapPenalty = text.length > 200 ? Math.floor(text.length / 320) : 0;
         return Math.max(1, baseLines + wordWrapPenalty);
     }
 }

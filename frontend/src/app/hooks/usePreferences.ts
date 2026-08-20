@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Locale } from '../types/translationType';
+import { TemplateType } from '../components/molecules/TemplateSelector';
 
 export function usePreferences() {
   const [locale, setLocale] = useState<Locale>(() => {
@@ -8,6 +9,10 @@ export function usePreferences() {
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     return (localStorage.getItem('glass_theme') as 'light' | 'dark') || 'dark';
+  });
+
+  const [template, setTemplate] = useState<TemplateType>(() => {
+    return (localStorage.getItem('glass_template') as TemplateType) || 'GlassModern';
   });
 
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -23,6 +28,10 @@ export function usePreferences() {
   }, [theme]);
 
   useEffect(() => {
+    localStorage.setItem('glass_template', template);
+  }, [template]);
+
+  useEffect(() => {
     localStorage.setItem('glass_tab', activeTab);
   }, [activeTab]);
 
@@ -31,6 +40,8 @@ export function usePreferences() {
     setLocale,
     theme,
     setTheme,
+    template,
+    setTemplate,
     activeTab,
     setActiveTab
   };

@@ -1,10 +1,10 @@
 class Page {
-    constructor(maxHeight = 980) {
+    constructor(maxHeight = 1000, initialUsedHeight = 0) {
         // Useful page height (A4 minus margins)
         this.maxHeight = maxHeight;
 
-        // Currently used height
-        this.usedHeight = 0;
+        // Currently used height (including header on page 1)
+        this.usedHeight = initialUsedHeight;
 
         // Page sections
         this.sections = [];
@@ -13,6 +13,7 @@ class Page {
     /**
      * Check if a block fits on the page.
      * @param {number} height
+     * @param {number} extraHeight
      * @returns {boolean}
      */
     canFit(height, extraHeight = 0) {
@@ -24,12 +25,13 @@ class Page {
     }
 
     /**
-     * Add a complete section.
+     * Add a section with total consumed height
      * @param {Object} section
+     * @param {number} consumedHeight
      */
-    addSection(section) {
+    addSection(section, consumedHeight = null) {
         this.sections.push(section);
-        this.usedHeight += section.height;
+        this.usedHeight += (consumedHeight !== null ? consumedHeight : section.height);
     }
 
     /**

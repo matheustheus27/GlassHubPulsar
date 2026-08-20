@@ -1,0 +1,13 @@
+{
+  "name": "glassmorphic-professional-resume",
+  "version": "2.2.0",
+  "description": "GlassHub - High-Tech Glassmorphic Professional Resume Platform",
+  "scripts": {
+    "docker:up": "docker compose up -d",
+    "docker:rebuild": "docker compose down && docker compose build --no-cache backend && docker compose up -d",
+    "docker:clean-rebuild": "docker compose down && docker compose build --no-cache backend && docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f backend",
+    "test": "node backend/tests/authAndData.test.js && node backend/tests/notification.test.js && node backend/tests/pagination.test.js && node backend/tests/atsScorer.test.js && node backend/tests/documentParser.test.js"
+  }
+}

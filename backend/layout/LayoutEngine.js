@@ -13,33 +13,36 @@ class LayoutEngine {
         }
     }
 
-    build(blocks) {
+    build(blocks, headerHeight = 0) {
         this.pages = [];
-        let currentPage = new Page(this.pageHeight);
-        this.log(`Starting pagination. Page height: ${this.pageHeight}px`);
+        let currentPage = new Page(this.pageHeight, headerHeight);
+        this.log(`Starting pagination. Page height: ${this.pageHeight}px, Page 1 Header: ${headerHeight}px`);
+
+        const NEW_CARD_OVERHEAD = 52; // Card padding (24px) + Section Title (22px) + Card gap (6px)
+        const ITEM_GAP_OVERHEAD = 8;  // Gap between items within the same card
 
         for (let i = 0; i < blocks.length; i++) {
             const block = blocks[i];
             const isNewSectionOnPage = currentPage.isEmpty() || currentPage.getLastSectionType() !== block.type;
-            // Increased to 120px to include title (15px) + border (1px) + internal padding (24px*2) + margins and gaps
-            const sectionOverhead = isNewSectionOnPage ? 120 : 0;
-            // Add 30px safety margin for rendering errors and anti-alias
-            const safetyMargin = 30;
-            const totalHeightNeeded = block.height + sectionOverhead + safetyMargin;
-            const canFit = currentPage.canFit(block.height, sectionOverhead + safetyMargin);
+            const overhead = isNewSectionOnPage ? NEW_CARD_OVERHEAD : ITEM_GAP_OVERHEAD;
+            const canFit = currentPage.canFit(block.height, overhead);
 
-            this.log(`Block ${i + 1} [${block.type}]: height=${block.height}px, overhead=${sectionOverhead}px, total=${totalHeightNeeded}px, canFit=${canFit}`);
+            this.log(`Block ${i + 1} [${block.type}]: height=${block.height}px, overhead=${overhead}px, canFit=${canFit}`);
             this.log(`  Current page: used=${currentPage.usedHeight}px, remaining=${currentPage.remainingHeight()}px`);
 
             if (!currentPage.isEmpty() && !canFit) {
-                this.log(`  \u2192 Jumping to new page`);
+                this.log(`  → Jumping to new page`);
                 this.pages.push(currentPage);
-                currentPage = new Page(this.pageHeight);
+                currentPage = new Page(this.pageHeight, 0);
                 this.log(`  Page ${this.pages.length + 1} created`);
+                
+                // On the new page, this block starts a new card
+                currentPage.addSection(block, block.height + NEW_CARD_OVERHEAD);
+            } else {
+                currentPage.addSection(block, block.height + overhead);
             }
 
-            currentPage.addSection(block);
-            this.log(`  Block ${i + 1} added. Page: ${currentPage.usedHeight}px / ${this.pageHeight}px`);
+            this.log(`  Block ${i + 1} placed. Page used: ${currentPage.usedHeight}px / ${this.pageHeight}px`);
         }
 
         if (!currentPage.isEmpty()) {

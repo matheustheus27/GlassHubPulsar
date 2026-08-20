@@ -1,24 +1,40 @@
+name: glassmorphic_professional_resume
+
 services:
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: glasshub-gateway
+    ports:
+      - "80:80"
+      - "3000:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - doc_network
+    restart: unless-stopped
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "nginx", "service": "gateway"}]'
+
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: document-webpage-client
+    container_name: glasshub-frontend
     ports:
       - "5173:5173"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
+      - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
-    command: >
-      sh -c "
-      for f in PersonalData SummaryData SkillsData ExperienceData EducationData SettingsData TranslationsData LanguagesData CoverLetterData ProjectData; do
-        if [ ! -f src/app/data/$$f.ts ] && [ -f src/app/data/$$f.ts.example ]; then
-          cp src/app/data/$$f.ts.example src/app/data/$$f.ts;
-        fi;
-      done && npm run dev -- --host
-      "
+      - VITE_API_URL=http://localhost/api
+      - VITE_BACKEND_URL=http://backend:3001
+      - DOCKER_CONTAINER=true
+    command: npm run dev -- --host
     depends_on:
       - backend
     networks:
@@ -30,7 +46,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    container_name: document-export-server
+    container_name: glasshub-backend-api
     ports:
       - "3001:3001"
     volumes:
@@ -38,11 +54,137 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-    command: sh -c "npm run dev"
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/glasshub_db?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USE_REDIS=true
+      - OLLAMA_HOST=http://ollama:11434
+      - JWT_SECRET=glasshub_super_secret_jwt_key_2026
+      - DD_ENABLED=true
+      - DD_AGENT_HOST=datadog
+      - NOTIFICATION_EMAIL_ENABLED=false
+      - NOTIFICATION_WHATSAPP_ENABLED=false
+    command: sh -c "npx prisma generate && npm run dev"
+    depends_on:
+      - postgres
+      - redis
     networks:
       - doc_network
     labels:
-      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "backend"}]'
+      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "backend-api"}]'
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: glasshub-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=glasshub_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - doc_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: glasshub-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - doc_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker-translation:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: glasshub-worker-translation
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/glasshub_db?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USE_REDIS=true
+      - OLLAMA_HOST=http://ollama:11434
+    command: sh -c "node -e 'require(\"./workers/translationWorker\"); console.log(\"Translation worker running\"); setInterval(()=>{}, 1000);'"
+    depends_on:
+      - postgres
+      - redis
+      - ollama
+    networks:
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "worker-translation"}]'
+
+  worker-notification:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: glasshub-worker-notification
+    environment:
+      - NODE_ENV=development
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USE_REDIS=true
+    command: sh -c "node -e 'require(\"./workers/notificationWorker\"); console.log(\"Notification worker running\"); setInterval(()=>{}, 1000);'"
+    depends_on:
+      - redis
+    networks:
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "worker-notification"}]'
+
+  worker-pdf:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: glasshub-worker-pdf
+    environment:
+      - NODE_ENV=development
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USE_REDIS=true
+    command: sh -c "node -e 'require(\"./workers/pdfWorker\"); console.log(\"PDF worker running\"); setInterval(()=>{}, 1000);'"
+    depends_on:
+      - redis
+    networks:
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "worker-pdf"}]'
+
+  worker-analytics:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: glasshub-worker-analytics
+    environment:
+      - NODE_ENV=development
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USE_REDIS=true
+      - OLLAMA_HOST=http://ollama:11434
+    command: sh -c "node -e 'require(\"./workers/analyticsWorker\"); console.log(\"Analytics/ATS worker running\"); setInterval(()=>{}, 1000);'"
+    depends_on:
+      - redis
+      - ollama
+    networks:
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "worker-analytics"}]'
 
   ollama:
     image: ollama/ollama:latest
@@ -53,25 +195,27 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - doc_network
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2 && wait"]
+    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2 && wait" ]
     labels:
       com.datadoghq.ad.logs: '[{"source": "ollama", "service": "ai-engine"}]'
 
   datadog:
     image: gcr.io/datadoghq/agent:7
-    container_name: datadog-agent
+    container_name: glasshub-datadog-agent
     environment:
-      - DD_API_KEY=${DD_API_KEY:-sua_api_key_aqui}
+      - DD_API_KEY=${DD_API_KEY:-glasshub_local_dev_key}
       - DD_SITE=${DD_SITE:-datadoghq.com}
       - DD_LOGS_ENABLED=true
       - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
       - DD_PROCESS_AGENT_ENABLED=true
       - DD_DOGSTATSD_NON_LOCAL_TRAFFIC=true
+      - DD_BIND_HOST=0.0.0.0
+    ports:
+      - "8125:8125/udp"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc/:/host/proc/:ro
       - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
     networks:
       - doc_network
 
@@ -80,4 +224,6 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_data:
+  redis_data:
   ollama_data:

@@ -4,9 +4,15 @@ import { AIChatPayload, AIChatResponse } from '../dto/AIChatDTO';
 export async function sendAIChatMessage(
   payload: AIChatPayload
 ): Promise<ChatMessage> {
-  const response = await fetch('http://localhost:3001/ai/messages/send', {
+  const token = localStorage.getItem('glasshub_token');
+
+  const response = await fetch('/api/ai/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    credentials: 'include',
     body: JSON.stringify(payload)
   });
 
@@ -15,11 +21,11 @@ export async function sendAIChatMessage(
     throw new Error(errorData.error || 'Failed to communicate with AI Service');
   }
 
-  const data: AIChatResponse = await response.json();
+  const data = await response.json();
 
-  if (!data.success || !data.message) {
+  if (!data.success || !data.messages) {
     throw new Error(data.error || 'Invalid response format from AI Server');
   }
 
-  return data.message;
+  return data.messages;
 }

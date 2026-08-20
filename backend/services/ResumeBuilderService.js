@@ -1,19 +1,21 @@
 const BlockFactory = require("../layout/BlockFactory");
 const LayoutEngine = require("../layout/LayoutEngine");
+const ContactLinkOptimizer = require("../layout/ContactLinkOptimizer");
+const { getTheme } = require("../templates/themes");
 
 class ResumeBuilderService {
   static build(resume, options = {}) {
     const settings = resume.settings || {};
     const debug = options.debug || false;
-    const langBase = settings.language || "pt";
+    const langBase = settings.language || resume.language || "pt";
     const cleanLang = langBase.split("-")[0];
 
-    const p = resume.personal?.personal || {};
-    const summaryData = resume.summary || {};
-    const skillsData = resume.skills || {};
-    const experienceData = resume.experiences || {};
-    const educationData = resume.education || {};
-    const projectsData = resume.projects || {};
+    const p = resume.personalDetails || resume.personal?.personal || resume.personal || {};
+    const summaryData = resume.summaryDetails || resume.summary || {};
+    const skillsData = resume.skillsDetails || resume.skills || {};
+    const experienceData = resume.experienceDetails || resume.experiences || {};
+    const educationData = resume.educationDetails || resume.education || {};
+    const projectsData = resume.projectDetails || resume.projects || {};
 
     // 1. Feed the sequential block queue for virtual pixel calculation
     const blocks = [];
@@ -22,40 +24,47 @@ class ResumeBuilderService {
       blocks.push(BlockFactory.createSummary(summaryData));
     }
 
-    if (skillsData.skills) {
-      blocks.push(BlockFactory.createSkills(skillsData, settings));
+    const skillsList = skillsData.skills || (Array.isArray(skillsData) ? skillsData : []);
+    if (skillsList.length > 0) {
+      blocks.push(BlockFactory.createSkills({ skills: skillsList, title: skillsData.skillsTitle || skillsData.title || (cleanLang === 'pt' ? 'COMPETÊNCIAS & TECNOLOGIAS' : 'SKILLS & TECHNOLOGIES') }, settings));
     }
 
-    if (Array.isArray(experienceData.experiences)) {
-      experienceData.experiences.forEach((exp) => {
+    const expList = experienceData.experiences || (Array.isArray(experienceData) ? experienceData : []);
+    if (Array.isArray(expList)) {
+      expList.forEach((exp) => {
         blocks.push(BlockFactory.createExperience(exp, settings));
       });
     }
 
-    if (Array.isArray(educationData.education)) {
-      educationData.education.forEach((edu) => {
+    const eduList = educationData.educations || educationData.education || (Array.isArray(educationData) ? educationData : []);
+    if (Array.isArray(eduList)) {
+      eduList.forEach((edu) => {
         blocks.push(BlockFactory.createEducation(edu, settings));
       });
     }
 
-    if (Array.isArray(projectsData.projects)) {
-      projectsData.projects.forEach((proj) => {
+    const projList = projectsData.projects || (Array.isArray(projectsData) ? projectsData : []);
+    if (Array.isArray(projList)) {
+      projList.forEach((proj) => {
         blocks.push(BlockFactory.createProjects(proj));
       });
     }
 
-    // 2. Use dynamic page height, calibrated from actual A4 layout
+    // 2. Build header and calculate its realistic pixel height on Page 1
+    const { headerHtml, headerHeight } = this.buildHeader(p, settings);
+
+    // 3. Dynamic page height (safe A4 rendering budget of 960px prevents card overflowing bottom boundary)
     const pageHeight = options.pageHeight || this.calculatePageHeight(settings);
     const engine = new LayoutEngine(pageHeight, debug);
-    const calculatedPages = engine.build(blocks);
+    const calculatedPages = engine.build(blocks, headerHeight);
 
-    const headerHtml = this.header(p, settings);
+    const summaryTitle = summaryData.summaryTitle || summaryData.title || (cleanLang === 'pt' ? 'RESUMO PROFISSIONAL' : 'PROFESSIONAL SUMMARY');
+    const skillsTitle = skillsData.skillsTitle || skillsData.title || (cleanLang === 'pt' ? 'COMPETÊNCIAS & TECNOLOGIAS' : 'SKILLS & TECHNOLOGIES');
+    const expTitle = experienceData.experienceTitle || experienceData.title || (cleanLang === 'pt' ? 'HISTÓRICO PROFISSIONAL' : 'PROFESSIONAL EXPERIENCE');
+    const eduTitle = educationData.educationTitle || educationData.title || (cleanLang === 'pt' ? 'FORMAÇÃO ACADÊMICA' : 'ACADEMIC BACKGROUND');
+    const projTitle = projectsData.projectTitle || projectsData.title || (cleanLang === 'pt' ? 'PROJETOS DE DESTAQUE' : 'FEATURED PROJECTS');
 
-    let isExperienceRenderedBefore = false;
-    let isEducationRenderedBefore = false;
-    let isProjectsRenderedBefore = false;
-
-    // 3. HTML builder per physical sheet
+    // 4. HTML builder per physical sheet
     const pagesHtml = calculatedPages.map((page, index) => {
       const pageHeader = index === 0 ? headerHtml : "";
 
@@ -74,38 +83,15 @@ class ResumeBuilderService {
           let sectionTitle = "";
 
           if (block.type === "summary") {
-            sectionTitle = summaryData.title;
-          }
-
-          if (block.type === "skills") {
-            sectionTitle = skillsData.title;
-          }
-
-          if (block.type === "experience") {
-            if (isExperienceRenderedBefore) {
-              sectionTitle = `${experienceData.title} <em>(${cleanLang === 'pt' ? 'Continuação' : 'Continued'})</em>`;
-            } else {
-              sectionTitle = experienceData.title;
-              isExperienceRenderedBefore = true;
-            }
-          }
-
-          if (block.type === "education") {
-            if (isEducationRenderedBefore) {
-              sectionTitle = `${educationData.title} <em>(${cleanLang === 'pt' ? 'Continuação' : 'Continued'})</em>`;
-            } else {
-              sectionTitle = educationData.title;
-              isEducationRenderedBefore = true;
-            }
-          }
-
-          if (block.type === "projects") {
-            if (isProjectsRenderedBefore) {
-              sectionTitle = `${projectsData.title} <em>(${cleanLang === 'pt' ? 'Continuação' : 'Continued'})</em>`;
-            } else {
-              sectionTitle = projectsData.title;
-              isProjectsRenderedBefore = true;
-            }
+            sectionTitle = summaryTitle;
+          } else if (block.type === "skills") {
+            sectionTitle = skillsTitle;
+          } else if (block.type === "experience") {
+            sectionTitle = expTitle;
+          } else if (block.type === "education") {
+            sectionTitle = eduTitle;
+          } else if (block.type === "projects") {
+            sectionTitle = projTitle;
           }
 
           activeGroupHtml += `<div class="section-title">${sectionTitle}</div>`;
@@ -132,6 +118,9 @@ class ResumeBuilderService {
       <head>
         <meta charset="UTF-8">
         <title>${p.name || "Curriculum"}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
         ${this.styles(settings)}
       </head>
       <body>
@@ -142,201 +131,112 @@ class ResumeBuilderService {
   }
 
   static calculatePageHeight(settings = {}) {
-    const pagePaddingTop = 22; // mm
-    const pagePaddingBottom = 22; // mm
-    const pagePaddingLeft = 18; // mm
-    const pagePaddingRight = 18; // mm
-
-    const a4HeightMm = 297;
-    const a4WidthMm = 210;
-
-    const contentHeightMm = a4HeightMm - pagePaddingTop - pagePaddingBottom;
-    const contentWidthMm = a4WidthMm - pagePaddingLeft - pagePaddingRight;
-
-    const pxPerMm = 3.7795275591;
-    const contentHeightPx = contentHeightMm * pxPerMm;
-    const contentWidthPx = contentWidthMm * pxPerMm;
-
-    return Math.round(contentHeightPx);
+    return 960;
   }
 
-  static styles(s) {
-    // Garante fallbacks para evitar erros de leitura de propriedades indefinidas
-    const card = s.card || { borderColor: 'transparent', backgroundColor: 'transparent' };
-    const title = s.title || { primary: {}, secondary: {} };
-    const subtitle = s.subtitle || { primary: {}, secondary: {} };
-    const caption = s.caption || { primary: {}, secondary: {} };
-    const meta = s.meta || {};
-    const chip = s.chip || {};
-
-    return `
-      <style>
-        @page { size: A4; margin: 0mm !important; }
-        * { box-sizing: border-box; }
-        
-        html, body {
-          margin: 0 !important; padding: 0 !important; width: 210mm; height: 297mm;
-          background: ${s.backgroundColor || '#030712'} !important;
-          -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
-        }
-
-        body {
-          font-family: ${caption.secondary.fontType || 'system-ui'};
-          color: ${caption.secondary.fontColor || '#f8fafc'};
-          font-size: ${caption.secondary.fontSize || '13px'};
-          line-height: 1.5;
-        }
-
-        .a4-page {
-          width: 210mm; height: 297mm; max-height: 297mm;
-          page-break-after: always !important; break-after: always !important;
-          background: ${s.backgroundColor || '#030712'} !important; 
-          padding: 22mm 18mm;
-          display: flex; flex-direction: column; gap: 14px;
-          overflow: hidden; position: relative;
-        }
-        .a4-page:last-child { page-break-after: avoid !important; break-after: avoid !important; }
-
-        .glass-card {
-          background: ${card.backgroundColor} !important;
-          border: 1px solid ${card.borderColor} !important;
-          border-radius: 12px; padding: 24px;
-          display: flex; flex-direction: column; gap: 14px; /* Mantém o gap vertical padrão */
-        }
-
-        h1 { 
-          font-family: ${title.primary.fontType}; 
-          font-size: ${title.primary.fontSize}; 
-          color: ${title.primary.fontColor}; 
-          font-weight: ${title.primary.fontWeight || '700'};
-          margin: 0; padding: 0; text-transform: uppercase; tracking-tight;
-        }
-
-        h2.candidate-subtitle { 
-          font-family: ${subtitle.primary.fontType}; 
-          font-size: ${subtitle.primary.fontSize}; 
-          color: ${subtitle.primary.fontColor}; 
-          font-weight: ${subtitle.primary.fontWeight || '700'};
-          margin: 0; text-transform: uppercase; tracking-widest;
-        }
-
-        .section-title { 
-          font-family: ${title.secondary.fontType};
-          font-size: ${title.secondary.fontSize}; 
-          font-weight: ${title.secondary.fontWeight || '700'}; 
-          color: ${title.secondary.fontColor}; 
-          text-transform: uppercase; tracking-wide;
-          border-bottom: 1px solid ${card.borderColor}; 
-          padding-bottom: 6px; margin-bottom: 2px; 
-        }
-
-        .contacts-grid { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; }
-        .contacts-grid a { 
-          font-family: ${meta.fontType};
-          font-size: ${meta.fontSize};
-          font-weight: ${meta.fontWeight || '700'};
-          color: ${meta.fontColor}; 
-          text-decoration: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; 
-        }
-
-        .skill-group-title {
-          font-family: ${subtitle.secondary.fontType};
-          font-size: ${subtitle.secondary.fontSize};
-          font-weight: ${subtitle.secondary.fontWeight || '700'};
-          color: ${subtitle.secondary.fontColor};
-          text-transform: uppercase; margin-bottom: 8px; tracking-wider;
-        }
-
-        .badge {
-          font-family: ${chip.fontType};
-          font-size: ${chip.fontSize};
-          font-weight: ${chip.fontWeight || '500'};
-          color: ${chip.fontColor};
-          background: ${chip.backgroundColor} !important;
-          border: 1px solid ${chip.borderColor || 'transparent'} !important;
-          padding: 4px 10px; border-radius: 6px; display: inline-flex;
-        }
-
-        .item-company {
-          font-family: ${caption.primary.fontType};
-          font-size: ${caption.primary.fontSize};
-          font-weight: ${caption.primary.fontWeight || '700'};
-          color: ${caption.primary.fontColor};
-        }
-
-        .item-role {
-          font-family: ${subtitle.primary.fontType};
-          font-size: ${subtitle.primary.fontSize};
-          font-weight: ${subtitle.primary.fontWeight || '600'};
-          color: ${subtitle.primary.fontColor};
-          font-style: italic; margin-bottom: 4px;
-        }
-
-        .item-date { 
-          font-family: ${meta.fontType};
-          font-size: ${meta.fontSize};
-          font-weight: ${meta.fontWeight || '700'};
-          color: ${meta.fontColor}; 
-        }
-
-        .items-holder { 
-          display: flex; 
-          flex-direction: column; 
-          gap: 14px; 
-        }
-        
-        .item-block {
-          width: 100%;
-          margin: 0 !important;
-          padding: 0 !important;
-        }
-
-        .description-text, ul { 
-          font-family: ${caption.secondary.fontType};
-          font-size: ${caption.secondary.fontSize};
-          color: ${caption.secondary.fontColor}; 
-          text-align: justify; margin: 0;
-        }
-        ul { margin-left: 18px; padding: 0; }
-        li { margin-bottom: 5px; }
-      </style>
-    `;
+  static styles(settings = {}) {
+    const activeTemplate = settings.template || settings.activeTemplate || "GlassModern";
+    const themeModule = getTheme(activeTemplate);
+    return themeModule.generateStyles(settings);
   }
 
-  static header(p, s) {
-    const card = s.card || {};
-    const meta = s.meta || {};
+  static buildHeader(p, settings = {}) {
+    const card = settings.card || {};
+    const contactItems = [];
 
-    const contactsHtml = (p.contact || []).map(c => {
-      let icon = "🔗";
-      if (c.link.includes("mailto")) icon = c.icon || "✉️";
-      if (c.link.includes("wa.me") || c.link.includes("phone")) icon = c.icon || "📞";
-      if (c.link.includes("github")) icon = c.icon || "🐙";
-      if (c.link.includes("linkedin")) icon = c.icon || "💼";
+    // Location
+    if (p.location) {
+      const locText = typeof p.location === 'string' ? p.location : (p.location.location || p.location.title || '');
+      if (locText) {
+        contactItems.push({
+          title: locText,
+          link: (typeof p.location === 'object' && p.location.link) ? p.location.link : `https://maps.google.com/?q=${encodeURIComponent(locText)}`,
+          icon: "📍"
+        });
+      }
+    }
 
-      return `<a href="${c.link}" target="_blank">${icon} ${c.title}</a>`;
-    }).join("");
+    // Email & Phone
+    if (p.contact?.email?.email) {
+      contactItems.push({
+        title: p.contact.email.email,
+        link: `mailto:${p.contact.email.email}`,
+        icon: "✉️"
+      });
+    }
 
-    const locationHtml = p.location
-      ? `<a href="${p.location.link}" target="_blank">${p.location.icon || "📍"} ${p.location.title}</a>`
-      : "";
+    if (p.contact?.phone?.phone) {
+      const cleanPhone = p.contact.phone.phone.replace(/\D/g, '');
+      contactItems.push({
+        title: p.contact.phone.phone,
+        link: p.contact.phone.link || (cleanPhone ? `https://wa.me/${cleanPhone}` : '#'),
+        icon: "📞"
+      });
+    }
 
-    return `
-      <header style="margin-bottom: 6px; border-bottom: 1px solid ${card.borderColor}; padding-bottom: 16px;">
+    // Networking
+    const net = p.contact?.networking || {};
+    for (const [key, val] of Object.entries(net)) {
+      if (val && (val.url || val.name)) {
+        let displayTitle = val.name || key;
+        let favicon = '';
+
+        // If it's a portfolio or generic website link, extract the site name / domain
+        if (val.url && (key.toLowerCase().includes('portfolio') || key.toLowerCase().includes('site') || key.toLowerCase().includes('web') || displayTitle.toLowerCase().includes('portfólio') || displayTitle.toLowerCase().includes('portfolio'))) {
+          try {
+            const parsed = new URL(val.url.startsWith('http') ? val.url : `https://${val.url}`);
+            const domain = parsed.hostname.replace(/^www\./, '');
+            displayTitle = (val.title && val.title !== 'Portfólio' && val.title !== 'Portfolio') ? val.title : domain;
+            favicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+          } catch (e) {
+            displayTitle = val.url;
+          }
+        }
+
+        contactItems.push({
+          title: displayTitle,
+          link: val.url || '#',
+          icon: val.icon || key,
+          favicon
+        });
+      }
+    }
+
+    // Direct Array contact fallback
+    if (Array.isArray(p.contact)) {
+      p.contact.forEach(c => {
+        contactItems.push({
+          title: c.title || c.name || c.email || c.phone || '',
+          link: c.link || c.url || '#',
+          icon: c.icon || ''
+        });
+      });
+    }
+
+    // Render balanced contact badges grid
+    const contactsHtml = ContactLinkOptimizer.renderHtml(contactItems, 680, settings);
+    const rows = ContactLinkOptimizer.balanceLinks(contactItems, 680);
+    const badgesHeight = (rows.length * 28) + (rows.length > 1 ? (rows.length - 1) * 6 : 0);
+    const headerHeight = Math.round(62 + badgesHeight + 14);
+
+    const headerHtml = `
+      <header style="margin-bottom: 6px; border-bottom: 1px solid ${card.borderColor || 'rgba(255,255,255,0.1)'}; padding-bottom: 10px;">
         <h1>${p.name || ""}</h1>
         <h2 class="candidate-subtitle">${p.title || ""}</h2>
-        <div class="contacts-grid">
-          ${locationHtml}
-          ${contactsHtml}
-        </div>
+        ${contactsHtml}
       </header>
     `;
+
+    return { headerHtml, headerHeight };
+  }
+
+  static header(p, settings = {}) {
+    return this.buildHeader(p, settings).headerHtml;
   }
 
   static debugPagination(resume) {
     const settings = resume.settings || {};
 
-    // 1. Instantiate the blocks using BlockFactory with the actual height estimates
     const blocks = [];
 
     if (resume.summary?.summary) {
@@ -365,10 +265,7 @@ class ResumeBuilderService {
       });
     }
 
-    // 2. Calculate the usable height A4
     const pageHeight = this.calculatePageHeight(settings);
-
-    // 3. Runs the engine with debug logging enabled
     const engine = new LayoutEngine(pageHeight, true);
     const pages = engine.build(blocks);
 

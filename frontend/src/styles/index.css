@@ -1,18 +1,105 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
 @import "tailwindcss";
+
+:root {
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-bg: rgba(15, 23, 42, 0.72);
+  --glass-blur: blur(18px);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --neon-cyan: #06b6d4;
+  --neon-violet: #8b5cf6;
+  --neon-emerald: #10b981;
+}
+
+html[data-theme="light"] {
+  --glass-border: rgba(15, 23, 42, 0.14);
+  --glass-bg: rgba(255, 255, 255, 0.88);
+  --glass-blur: blur(18px);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+}
 
 html, body, #root {
   margin: 0;
   padding: 0;
-  height: 100%;
+  min-height: 100%;
   background-color: #030712;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Accessibility: Interactive Minimum Click Target Dimensions (WCAG AAA) */
+button, a, input, select, textarea {
+  font-family: inherit;
+}
+
+/* GlassHub Spec Utility Classes */
+.glass-surface {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-surface:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 12px 40px 0 rgba(6, 182, 212, 0.18);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.2s ease;
+}
+
+.glass-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(56, 189, 248, 0.45);
+  transform: translateY(-1px);
+}
+
+.neon-glow-cyan {
+  box-shadow: 0 0 24px -2px rgba(6, 182, 212, 0.5);
+}
+
+.neon-glow-emerald {
+  box-shadow: 0 0 24px -2px rgba(16, 185, 129, 0.5);
+}
+
+/* Custom Sleek Glass Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(3, 7, 18, 0.85);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.6);
 }
 
 /* PRINT RESET (SAFE FOR PDF) */
 @media print {
   body {
     background: white !important;
+    color: black !important;
   }
 
   .print\:hidden {
@@ -24,7 +111,6 @@ html, body, #root {
     print-color-adjust: exact;
   }
 
-  /* remove efeitos problemáticos */
   .backdrop-blur,
   [class*="backdrop-blur"],
   [class*="shadow"] {
