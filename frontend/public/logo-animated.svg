@@ -1,96 +1,159 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="100%" height="100%">
   <defs>
-    <!-- Gradients -->
-    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Cosmic Gradients -->
+    <linearGradient id="cosmicGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#06b6d4" />
-      <stop offset="50%" stop-color="#38bdf8" />
-      <stop offset="100%" stop-color="#8b5cf6" />
+      <stop offset="45%" stop-color="#3b82f6" />
+      <stop offset="80%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#c084fc" />
     </linearGradient>
 
-    <linearGradient id="glassFacet1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.6" />
-      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.2" />
+    <linearGradient id="glassCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.7" />
     </linearGradient>
 
-    <linearGradient id="glassFacet2" x1="100%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.5" />
-      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.15" />
+    <linearGradient id="beamGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0" />
+      <stop offset="25%" stop-color="#38bdf8" stop-opacity="0.5" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="75%" stop-color="#38bdf8" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0" />
     </linearGradient>
 
-    <linearGradient id="sheenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="sheenAnimGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#ffffff" stop-opacity="0" />
       <stop offset="50%" stop-color="#ffffff" stop-opacity="0.45" />
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
     </linearGradient>
 
-    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
+    <filter id="pulsarGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
+
+    <clipPath id="squircleClip">
+      <rect x="20" y="20" width="200" height="200" rx="48" />
+    </clipPath>
   </defs>
 
   <style>
-    @keyframes floatDoc {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-5px); }
+    @keyframes pulseBeam {
+      0%, 100% { opacity: 0.65; transform: scaleX(0.9); }
+      50% { opacity: 1; transform: scaleX(1.15); }
     }
-    @keyframes sheenMove {
-      0% { transform: translateX(-150px) rotate(25deg); }
-      100% { transform: translateX(250px) rotate(25deg); }
+    @keyframes pulseWave {
+      0%, 100% { opacity: 0.35; transform: scale(0.97); }
+      50% { opacity: 0.85; transform: scale(1.03); }
     }
-    @keyframes pulseGlow {
-      0%, 100% { opacity: 0.4; transform: scale(0.98); }
-      50% { opacity: 0.85; transform: scale(1.04); }
+    @keyframes slowRotateStar {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
-    .g-glow-ring {
-      transform-origin: 100px 100px;
-      animation: pulseGlow 3.5s ease-in-out infinite;
+    @keyframes sheenPass {
+      0% { transform: translateX(-220px) rotate(25deg); }
+      100% { transform: translateX(340px) rotate(25deg); }
     }
-    .g-doc {
-      animation: floatDoc 3s ease-in-out infinite;
+    .pulsar-beam-anim {
+      transform-origin: 120px 120px;
+      animation: pulseBeam 2.5s ease-in-out infinite;
     }
-    .g-sheen {
-      animation: sheenMove 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    .pulsar-wave-1 {
+      transform-origin: 120px 120px;
+      animation: pulseWave 3s ease-in-out infinite;
+    }
+    .pulsar-wave-2 {
+      transform-origin: 120px 120px;
+      animation: pulseWave 3s ease-in-out infinite 0.75s;
+    }
+    .pulsar-wave-3 {
+      transform-origin: 120px 120px;
+      animation: pulseWave 3s ease-in-out infinite 1.5s;
+    }
+    .pulsar-star-float {
+      transform-origin: 120px 120px;
+    }
+    .pulsar-sheen {
+      animation: sheenPass 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     }
   </style>
 
-  <!-- Outer Neon Glow Ring -->
-  <circle class="g-glow-ring" cx="100" cy="100" r="82" fill="none" stroke="url(#primaryGrad)" stroke-width="2" opacity="0.6" filter="url(#neonGlow)" />
+  <!-- Deep Space Ambient Aura -->
+  <circle cx="120" cy="120" r="90" fill="url(#cosmicGrad)" opacity="0.25" filter="url(#pulsarGlow)" />
 
-  <!-- Outer Hexagon Prism Frame -->
-  <polygon points="100,16 172,56 172,136 100,176 28,136 28,56" fill="#030712" stroke="url(#primaryGrad)" stroke-width="4" stroke-linejoin="round" />
+  <!-- Glassmorphic Rounded Outer Squircle -->
+  <rect
+    x="20"
+    y="20"
+    width="200"
+    height="200"
+    rx="48"
+    fill="url(#glassCardGrad)"
+    stroke="rgba(255, 255, 255, 0.25)"
+    stroke-width="2"
+  />
 
-  <!-- Glass Prism Top Facet -->
-  <polygon points="100,16 172,56 100,96 28,56" fill="url(#glassFacet1)" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
+  <!-- Specular Inset Border -->
+  <rect
+    x="26"
+    y="26"
+    width="188"
+    height="188"
+    rx="42"
+    fill="none"
+    stroke="url(#cosmicGrad)"
+    stroke-opacity="0.35"
+    stroke-width="1.5"
+  />
 
-  <!-- Glass Prism Left Facet -->
-  <polygon points="28,56 100,96 100,176 28,136" fill="url(#glassFacet2)" stroke="rgba(6,182,212,0.4)" stroke-width="1.5" />
+  <!-- Concentric Signal Waves (Rhythmic Transmission Waves) -->
+  <circle class="pulsar-wave-1" cx="120" cy="120" r="76" stroke="#06b6d4" stroke-width="1.5" stroke-opacity="0.4" fill="none" />
+  <circle class="pulsar-wave-2" cx="120" cy="120" r="58" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.6" fill="none" />
+  <circle class="pulsar-wave-3" cx="120" cy="120" r="42" stroke="#8b5cf6" stroke-width="2.5" stroke-opacity="0.75" fill="none" />
 
-  <!-- Glass Prism Right Facet -->
-  <polygon points="172,56 172,136 100,176 100,96" fill="url(#glassFacet1)" stroke="rgba(139,92,246,0.4)" stroke-width="1.5" />
+  <!-- Vertical Pulsar Light Beam -->
+  <path
+    class="pulsar-beam-anim"
+    d="M114 24H126V216H114Z"
+    fill="url(#beamGrad)"
+    filter="url(#pulsarGlow)"
+  />
 
-  <!-- Document Shield Core (Resume Symbol) -->
-  <g class="g-doc">
-    <!-- Document Card -->
-    <rect x="68" y="62" width="64" height="76" rx="8" fill="rgba(15, 23, 42, 0.9)" stroke="url(#primaryGrad)" stroke-width="2.5" />
-    
-    <!-- Resume Headers and Bullets -->
-    <line x1="80" y1="78" x2="120" y2="78" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" />
-    <line x1="80" y1="90" x2="112" y2="90" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
-    <line x1="80" y1="100" x2="120" y2="100" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
-    <line x1="80" y1="110" x2="102" y2="110" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" />
+  <!-- Star Layer Group -->
+  <g class="pulsar-star-float">
+    <!-- Secondary 8-Point Star (Back facet) -->
+    <polygon
+      points="120,68 132,98 162,88 142,110 172,120 142,130 162,152 132,142 120,172 108,142 78,152 98,130 68,120 98,110 78,88 108,98"
+      fill="#8b5cf6"
+      fill-opacity="0.35"
+      stroke="url(#cosmicGrad)"
+      stroke-width="1.5"
+    />
 
-    <!-- Luminous Sparkle Badge -->
-    <circle cx="120" cy="122" r="7" fill="#06b6d4" filter="url(#neonGlow)" />
-    <circle cx="120" cy="122" r="3.5" fill="#ffffff" />
+    <!-- Primary 8-Point Geometric Crystal Star -->
+    <polygon
+      points="120,52 134,95 178,78 148,110 188,120 148,130 178,162 134,145 120,188 106,145 62,162 92,130 52,120 92,110 62,78 106,95"
+      fill="url(#cosmicGrad)"
+      fill-opacity="0.45"
+      stroke="rgba(255, 255, 255, 0.85)"
+      stroke-width="2"
+      stroke-linejoin="round"
+    />
+
+    <!-- Internal Diamond Specular Facets -->
+    <polygon points="120,56 134,106 120,120 106,106" fill="#ffffff" fill-opacity="0.65" />
+    <polygon points="120,120 134,134 120,184 106,134" fill="#3b82f6" fill-opacity="0.45" />
+    <polygon points="56,120 106,106 120,120 106,134" fill="#06b6d4" fill-opacity="0.55" />
+    <polygon points="120,120 134,106 184,120 134,134" fill="#a855f7" fill-opacity="0.55" />
+
+    <!-- Luminous Pulsar Core -->
+    <circle cx="120" cy="120" r="14" fill="#ffffff" filter="url(#pulsarGlow)" />
+    <circle cx="120" cy="120" r="8" fill="#e0f2fe" />
+    <circle cx="120" cy="120" r="4" fill="#ffffff" />
   </g>
 
-  <!-- Animated Sheen Filter Overlay -->
-  <g clip-path="url(#hexClip)">
-    <rect class="g-sheen" x="0" y="0" width="45" height="200" fill="url(#sheenGrad)" />
+  <!-- Animated Sheen Overlay -->
+  <g clip-path="url(#squircleClip)">
+    <rect class="pulsar-sheen" x="0" y="0" width="60" height="240" fill="url(#sheenAnimGrad)" />
   </g>
-
-  <clipPath id="hexClip">
-    <polygon points="100,16 172,56 172,136 100,176 28,136 28,56" />
-  </clipPath>
 </svg>
