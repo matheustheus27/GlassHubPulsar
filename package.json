@@ -1,7 +1,7 @@
 {
-  "name": "glassmorphic-professional-resume",
+  "name": "glasshub-pulsar",
   "version": "2.2.0",
-  "description": "GlassHub - High-Tech Glassmorphic Professional Resume Platform",
+  "description": "GlassHub Pulsar - High-Tech Glassmorphic Cosmic Resume & Cover Letter Platform",
   "scripts": {
     "docker:up": "docker compose up -d",
     "docker:rebuild": "docker compose down && docker compose build --no-cache backend && docker compose up -d",

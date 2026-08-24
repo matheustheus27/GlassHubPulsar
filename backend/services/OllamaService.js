@@ -387,9 +387,9 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
                 projectTitle: 'PROJETOS DE DESTAQUE',
                 projects: projects.length > 0 ? projects : [
                     {
-                        title: 'Glassmorphic Professional Resume',
-                        link: 'https://github.com/matheustheus27/Glassmorphic-Professional-Resume-Template',
-                        description: 'Plataforma enterprise de geração de currículos com motor de paginação A4 e IA.',
+                        title: 'GlassHub Pulsar',
+                        link: 'https://github.com/matheustheus27/GlassHubPulsar',
+                        description: 'Plataforma enterprise de geração de currículos com motor cósmico Glassmorphic, paginação A4 e IA.',
                         bullets: ['Arquitetura desacoplada de microsserviços com Puppeteer e telemetria Datadog.']
                     }
                 ]

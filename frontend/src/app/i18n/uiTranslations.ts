@@ -6,7 +6,7 @@
 export const uiTranslations = {
   'pt-BR': {
     // Brand & App
-    appName: 'GlassHub Resume',
+    appName: 'GlassHub Pulsar',
     tagline: 'Plataforma corporativa de criação, inteligência ATS e gestão de currículos executivos',
     specBadge: 'Padrão GlassHub Enterprise',
 
@@ -177,7 +177,7 @@ export const uiTranslations = {
 
   'en-US': {
     // Brand & App
-    appName: 'GlassHub Resume',
+    appName: 'GlassHub Pulsar',
     tagline: 'Enterprise platform for resume creation, ATS scoring, and executive talent management',
     specBadge: 'GlassHub Enterprise Standard',
 

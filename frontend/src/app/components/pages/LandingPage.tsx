@@ -49,7 +49,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginSuccess, onNavi
           <div className="flex items-center gap-2.5 pl-2">
             <GlassHubLogo size={28} />
             <span className="font-black text-lg tracking-tight text-slate-100">
-              GlassHub <GradientText from="from-cyan-400" to="to-violet-400">Resume</GradientText>
+              GlassHub <GradientText from="from-cyan-400" to="to-violet-400">Pulsar</GradientText>
             </span>
             <Badge variant="cyan" className="hidden sm:inline-flex ml-2 text-[10px] uppercase font-bold">
               v2.0 Enterprise
@@ -429,7 +429,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginSuccess, onNavi
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
             <GlassHubLogo size={20} />
-            <span className="font-bold text-slate-200">GlassHub Professional Resume</span>
+            <span className="font-bold text-slate-200">GlassHub Pulsar</span>
             <span className="text-slate-600">|</span>
             <span className="text-[11px] text-emerald-400">● Sistema Operacional</span>
           </div>

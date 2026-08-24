@@ -1,6 +1,6 @@
-# 🏛️ System Architecture - GlassHub Professional Resume
+# 🏛️ System Architecture - GlassHub Pulsar
 
-This document details the system architecture of **GlassHub Professional Resume**, explaining the component topology, design patterns, data flow between microservices, and technical justifications behind every engineering decision.
+This document details the system architecture of **GlassHub Pulsar**, explaining the component topology, design patterns, data flow between microservices, and technical justifications behind every engineering decision.
 
 ---
 

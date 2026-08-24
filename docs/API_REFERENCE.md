@@ -1,6 +1,6 @@
-# 🔌 REST API Reference - GlassHub Professional Resume
+# 🔌 REST API Reference - GlassHub Pulsar
 
-This document provides a comprehensive reference for all REST API endpoints provided by the **GlassHub Professional Resume** Express backend. The API follows RESTful conventions, consumes and returns JSON payloads, and requires **JSON Web Token (JWT)** authentication via the `Authorization` header.
+This document provides a comprehensive reference for all REST API endpoints provided by the **GlassHub Pulsar** Express backend. The API follows RESTful conventions, consumes and returns JSON payloads, and requires **JSON Web Token (JWT)** authentication via the `Authorization` header.
 
 ---
 

@@ -1,6 +1,6 @@
-# 📚 GlassHub Professional Resume Documentation
+# 📚 GlassHub Pulsar Documentation
 
-Welcome to the official technical documentation hub for **GlassHub Professional Resume**! This documentation is designed to be comprehensive, didactic, and accessible — serving both **interns during onboarding** and **staff engineers** who need to quickly understand architectural decisions and extend the ecosystem.
+Welcome to the official technical documentation hub for **GlassHub Pulsar**! This documentation is designed to be comprehensive, didactic, and accessible — serving both **interns during onboarding** and **staff engineers** who need to quickly understand architectural decisions and extend the ecosystem.
 
 ---
 

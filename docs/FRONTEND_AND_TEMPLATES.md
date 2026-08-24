@@ -1,6 +1,6 @@
-# 🎨 Frontend & Design System - GlassHub Professional Resume
+# 🎨 Frontend & Design System - GlassHub Pulsar
 
-This document describes the interface architecture of **GlassHub Professional Resume**, detailing the **GlassHub Design System (Atomic Design)**, Glassmorphism visual rules, the specifications for the 4 resume themes, the **Symmetrical Link Balancing Algorithm**, and the internationalization dictionary (`uiTranslations.ts`).
+This document describes the interface architecture of **GlassHub Pulsar**, detailing the **GlassHub Design System (Atomic Design)**, Glassmorphism visual rules, the specifications for the 4 resume themes, the **Symmetrical Link Balancing Algorithm**, and the internationalization dictionary (`uiTranslations.ts`).
 
 ---
 

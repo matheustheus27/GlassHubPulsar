@@ -91,7 +91,7 @@ export const GroupedNavbarHeader: React.FC<GroupedNavbarHeaderProps> = ({
         <div className="flex items-center gap-2.5">
           <GlassHubLogo size={26} />
           <span className="font-extrabold text-base md:text-lg tracking-tight text-slate-100 hidden sm:inline">
-            GlassHub <GradientText from="from-cyan-400" to="to-violet-400">Resume</GradientText>
+            GlassHub <GradientText from="from-cyan-400" to="to-violet-400">Pulsar</GradientText>
           </span>
         </div>
 

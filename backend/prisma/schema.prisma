@@ -1,4 +1,4 @@
-// Prisma Schema for Glassmorphic Professional Resume
+// Prisma Schema for GlassHub Pulsar
 
 datasource db {
   provider = "postgresql"

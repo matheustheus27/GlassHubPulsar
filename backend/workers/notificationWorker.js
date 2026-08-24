@@ -41,7 +41,7 @@ class EmailNotificationStrategy {
 
     const html = `
       <div style="background:#030712; color:#f8fafc; font-family:'Inter',sans-serif; padding:32px; border-radius:12px; max-width:600px; margin:auto; border:1px solid rgba(56,189,248,0.3);">
-        <h2 style="color:#38bdf8; margin-top:0;">GlassHub Professional Resume</h2>
+        <h2 style="color:#38bdf8; margin-top:0;">GlassHub Pulsar</h2>
         <h3 style="color:#f1f5f9;">${title}</h3>
         <p style="color:#94a3b8; font-size:14px; line-height:1.6;">${message}</p>
         <div style="margin-top:24px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1); font-size:12px; color:#64748b;">

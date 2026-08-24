@@ -1,6 +1,6 @@
-# 🤝 Contributing & Workflow Guide - GlassHub Professional Resume
+# 🤝 Contributing & Workflow Guide - GlassHub Pulsar
 
-Welcome to the development and contributing guide for **GlassHub Professional Resume**! This document guides developers of all experience levels (from interns to staff engineers) on setting up the local environment, working with PostgreSQL via Prisma, building asynchronous BullMQ workers, and following quality standards.
+Welcome to the development and contributing guide for **GlassHub Pulsar**! This document guides developers of all experience levels (from interns to staff engineers) on setting up the local environment, working with PostgreSQL via Prisma, building asynchronous BullMQ workers, and following quality standards.
 
 ---
 
@@ -16,8 +16,8 @@ Before starting, ensure you have the following tools installed on your host mach
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/matheustheus27/Glassmorphic-Professional-Resume-Template.git
-   cd Glassmorphic-Professional-Resume-Template
+   git clone https://github.com/matheustheus27/GlassHubPulsar.git
+   cd GlassHubPulsar
    ```
 
 2. **Generate Environment Configuration (`.env`):**

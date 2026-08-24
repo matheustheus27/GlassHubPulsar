@@ -1,6 +1,6 @@
-# 🚀 Deploy & DevOps - GlassHub Professional Resume
+# 🚀 Deploy & DevOps - GlassHub Pulsar
 
-This document describes the **DevOps, Infrastructure, and Deployment** practices for **GlassHub Professional Resume**, covering container orchestration via **Docker Compose**, the **Nginx** security gateway, **Puppeteer Linux calibration for A4 PDFs**, and **Datadog APM** telemetry.
+This document describes the **DevOps, Infrastructure, and Deployment** practices for **GlassHub Pulsar**, covering container orchestration via **Docker Compose**, the **Nginx** security gateway, **Puppeteer Linux calibration for A4 PDFs**, and **Datadog APM** telemetry.
 
 ---
 

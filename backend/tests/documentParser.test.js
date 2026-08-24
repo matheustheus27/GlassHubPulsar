@@ -98,7 +98,7 @@ C#, Utilitários de Sistema, Gerenciamento de Zip
 • Desenvolvimento de um toolkit de alta performance focado na manipulação, compactação e extração eficiente de arquivos zip.
 • Projetado com arquitetura de zero dependências externas para garantir execução rápida, baixo consumo de memória e fácil portabilidade.
 
-Glassmorphic Professional Resume
+GlassHub Pulsar
 React, TypeScript, CSS Modules/Tailwind, Construtor de Currículos & Engine de PDF
 • Criação de aplicação web para geração customizada de currículos profissionais com suporte a temas visuais modernos.
 • Implementação de controle de estado para edição dinâmica e conversão/exportação direta do documento formatado em PDF.

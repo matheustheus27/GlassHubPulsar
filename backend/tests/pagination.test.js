@@ -172,8 +172,8 @@ async function runPaginationAndVisualTests() {
           ]
         },
         {
-          title: "GlassHub Professional Resume",
-          link: "https://glasshub.dev/resume",
+          title: "GlassHub Pulsar",
+          link: "https://glasshub.dev/pulsar",
           description: "Nginx & Docker Compose, PostgreSQL 16, Redis 7 & BullMQ, Puppeteer Linux Engine, Llama 3.2 & TranslateGemma",
           bullets: [
             "Arquitetura de microsserviços desacoplada e uso de filas com BullMQ. Garante que o ecossistema suporte picos massivos de requisições e processamento de IA sem degradação de performance.",

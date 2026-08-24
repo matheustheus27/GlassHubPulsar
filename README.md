@@ -2,9 +2,9 @@
 
 <div align="center">
 
-  <img src="https://glass-hub-engine.vercel.app/api/logo?project=resume&theme=glass-dark&animated=true&width=280&height=280" alt="GlassHub Professional Resume Logo" width="280" height="280" />
+  <img src="https://glass-hub-engine.vercel.app/api/logo?project=pulsar&theme=glass-dark&animated=true&width=280&height=280" alt="GlassHub Pulsar Logo" width="280" height="280" />
 
-  # 📄 GlassHub Professional Resume
+  # 📄 GlassHub Pulsar
 
   <p><strong>Enterprise Document & AI Engine designed to manage, render, analyze, and export executive resumes and cover letters with a high-fidelity Glassmorphic visual identity.</strong></p>
 
@@ -47,7 +47,7 @@ For in-depth guides, REST API specifications, architectural decisions, and step-
 
 ## 💎 Visual Identity & Glassmorphism Aesthetics
 
-**GlassHub Professional Resume** strictly enforces the cosmic Glassmorphism visual language:
+**GlassHub Pulsar** strictly enforces the cosmic Glassmorphism visual language:
 - 🌌 **Translucent Glass Surfaces:** Dark semi-transparent finish with background blur (`backdrop-filter: blur(16px)`).
 - 💎 **Specular Light Reflections:** Light incidence highlights on surface top borders (`border-top: 1px solid rgba(255, 255, 255, 0.25)`).
 - ⚡ **Neon Glow Rings:** Luminous dynamic rings in HSL/RGB (`#06b6d4`, `#38bdf8`, `#8b5cf6`).
@@ -136,8 +136,8 @@ To keep raw data clean while supporting rich inline typography, the platform pro
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/matheustheus27/Glassmorphic-Professional-Resume-Template.git
-   cd Glassmorphic-Professional-Resume-Template
+   git clone https://github.com/matheustheus27/GlassHubPulsar.git
+   cd GlassHubPulsar
    ```
 
 2. **Initialize environment configuration:**

@@ -133,9 +133,9 @@ async function seed() {
         projectTitle: "PROJETOS DE DESTAQUE",
         projects: [
           {
-            title: "Glassmorphic Resume Platform",
-            description: "Plataforma enterprise de geração de currículos com motor de paginação A4 e IA.",
-            link: "https://github.com/matheustheus27/Glassmorphic-Professional-Resume-Template",
+            title: "GlassHub Pulsar",
+            description: "Plataforma enterprise de geração de currículos com motor cósmico Glassmorphic, paginação A4 e IA.",
+            link: "https://github.com/matheustheus27/GlassHubPulsar",
             bullets: ["Arquitetura desacoplada de microsserviços com Puppeteer e telemetria Datadog."]
           }
         ]
