@@ -2,7 +2,7 @@
 
 <div align="center">
 
-  <img src="https://glass-hub-engine.vercel.app/api/logo?project=pulsar&theme=glass-dark&animated=true&width=280&height=280" alt="GlassHub Pulsar Logo" width="280" height="280" />
+  <img src="https://glasshub-quasar.vercel.app/api/logo?project=pulsar&theme=glass-dark&animated=true&width=280&height=280" alt="GlassHub Pulsar Logo" width="280" height="280" />
 
   # 📄 GlassHub Pulsar
 
@@ -10,22 +10,22 @@
 
   <p>
     <a href="LICENSE">
-      <img src="https://glass-hub-engine.vercel.app/api/badge?label=License&value=MIT&icon=sparkles&theme=glass-dark&glow=true" alt="License MIT" />
+      <img src="https://glasshub-quasar.vercel.app/api/badge?label=License&value=MIT&icon=sparkles&theme=glass-dark&glow=true" alt="License MIT" />
     </a>
     <a href="https://nodejs.org">
-      <img src="https://glass-hub-engine.vercel.app/api/badge?label=Node.js&value=v20.x&icon=nodejs&theme=glass-dark&glow=true" alt="Node.js" />
+      <img src="https://glasshub-quasar.vercel.app/api/badge?label=Node.js&value=v20.x&icon=nodejs&theme=glass-dark&glow=true" alt="Node.js" />
     </a>
     <a href="https://react.dev">
-      <img src="https://glass-hub-engine.vercel.app/api/badge?label=React&value=v18.3&icon=react&theme=glass-dark&glow=true" alt="React" />
+      <img src="https://glasshub-quasar.vercel.app/api/badge?label=React&value=v18.3&icon=react&theme=glass-dark&glow=true" alt="React" />
     </a>
     <a href="https://www.typescriptlang.org">
-      <img src="https://glass-hub-engine.vercel.app/api/badge?label=TypeScript&value=v5.5&icon=typescript&theme=glass-dark&glow=true" alt="TypeScript" />
+      <img src="https://glasshub-quasar.vercel.app/api/badge?label=TypeScript&value=v5.5&icon=typescript&theme=glass-dark&glow=true" alt="TypeScript" />
     </a>
     <a href="https://www.postgresql.org">
-      <img src="https://glass-hub-engine.vercel.app/api/badge?label=PostgreSQL&value=v16&icon=postgresql&theme=glass-dark&glow=true" alt="PostgreSQL" />
+      <img src="https://glasshub-quasar.vercel.app/api/badge?label=PostgreSQL&value=v16&icon=postgresql&theme=glass-dark&glow=true" alt="PostgreSQL" />
     </a>
     <a href="https://www.docker.com">
-      <img src="https://glass-hub-engine.vercel.app/api/badge?label=Docker&value=Ready&icon=docker&theme=glass-dark&glow=true" alt="Docker" />
+      <img src="https://glasshub-quasar.vercel.app/api/badge?label=Docker&value=Ready&icon=docker&theme=glass-dark&glow=true" alt="Docker" />
     </a>
   </p>
 
