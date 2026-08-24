@@ -4,7 +4,7 @@
 
   <img src="https://glasshub-quasar.vercel.app/api/logo?project=pulsar&theme=glass-dark&animated=true&width=280&height=280" alt="GlassHub Pulsar Logo" width="280" height="280" />
 
-  # 📄 GlassHub Pulsar
+  # ⚡ GlassHub Pulsar
 
   <p><strong>Enterprise Document & AI Engine designed to manage, render, analyze, and export executive resumes and cover letters with a high-fidelity Glassmorphic visual identity.</strong></p>
 
