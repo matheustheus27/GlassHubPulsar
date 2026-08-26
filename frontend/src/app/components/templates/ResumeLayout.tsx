@@ -109,6 +109,7 @@ export const ResumeLayout: React.FC<ResumeLayoutProps> = ({
           },
           contact: {
             color: isLight ? '#0f172a' : '#f8fafc',
+            iconColor: titlePrimary.fontColor || '#06b6d4',
             backgroundColor: isLight ? '#f1f5f9' : 'rgba(15, 23, 42, 0.75)',
             borderColor: isLight ? 'rgba(15, 23, 42, 0.18)' : 'rgba(255, 255, 255, 0.15)',
             fontFamily: metaStyle.fontType,

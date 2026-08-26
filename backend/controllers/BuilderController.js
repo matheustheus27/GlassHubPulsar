@@ -6,6 +6,7 @@ const logger = require("../utils/logger");
 const metrics = require("../utils/metrics");
 const queueManager = require("../queues/queueManager");
 const pdfWorker = require("../workers/pdfWorker");
+const sseController = require("../controllers/SSEController");
 
 // Temporary in-memory cache for generated PDF downloads
 const pdfCache = new Map();
@@ -85,15 +86,27 @@ class BuilderController {
                 language: docLang
             });
 
-            // Enqueue in BullMQ pdf queue
-            const queue = queueManager.getQueue("pdf");
-            await queue.add("render_document", {
+            const userId = req.user?.id || req.body?.userId || null;
+
+            // Dispatch via MessageBroker (RabbitMQ primary, InMemory fallback)
+            const messageBroker = require('../messaging/MessageBroker');
+            await messageBroker.dispatch('pdf.render', {
                 jobId,
                 type,
                 document,
                 candidateName: docName,
                 fileName,
-                language: docLang
+                language: docLang,
+                userId
+            });
+
+            // Notify frontend immediately that the job is queued (progress 10)
+            sseController.broadcast({
+                type: 'PDF_PROGRESS',
+                jobId,
+                progress: 10,
+                step: `Tarefa enfileirada no worker-pdf para renderização de "${fileName}"...`,
+                fileName
             });
 
             return res.json({

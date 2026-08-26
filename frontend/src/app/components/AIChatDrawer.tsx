@@ -88,12 +88,20 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
         body: JSON.stringify({ rawText, language: lang })
       });
 
-      const json = await res.json();
-      if (res.ok && json.success) {
+      const contentType = res.headers.get('content-type') || '';
+      let json: any = null;
+      if (contentType.includes('application/json')) {
+        json = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Servidor de IA respondeu com formato inesperado (${res.status}): ${text.slice(0, 120)}`);
+      }
+
+      if (res.ok && json?.success) {
         setExtractedPreview(json.data);
         setStatusMessage(lang === 'pt-BR' ? '✓ Dados estruturados com sucesso! Clique em "Aplicar no Formulário".' : '✓ Successfully structured! Click "Apply to Resume".');
       } else {
-        throw new Error(json.error || 'Falha ao processar texto');
+        throw new Error(json?.error || 'Falha ao processar texto');
       }
     } catch (err: any) {
       setStatusMessage(`⚠️ ${err.message}`);
@@ -123,12 +131,21 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
           })
         });
 
-        const json = await res.json();
-        if (res.ok && json.success) {
-          setExtractedPreview(json.data);
-          setStatusMessage(`✓ Currículo de ${json.data.personalDetails?.name || 'candidato'} extraído com sucesso! Clique em "Aplicar no Formulário".`);
+        const contentType = res.headers.get('content-type') || '';
+        let json: any = null;
+        if (contentType.includes('application/json')) {
+          json = await res.json();
         } else {
-          throw new Error(json.error || 'Falha ao analisar arquivo');
+          const text = await res.text();
+          throw new Error(`Servidor de IA respondeu com erro (${res.status}): ${text.slice(0, 120)}`);
+        }
+
+        if (res.ok && json?.success) {
+          setExtractedPreview(json.data);
+          const candidateName = json.data?.personalDetails?.name || json.data?.rawSchema?.candidato?.nome || 'candidato';
+          setStatusMessage(`✓ Currículo de ${candidateName} extraído com sucesso! Clique em "Aplicar no Formulário".`);
+        } else {
+          throw new Error(json?.error || 'Falha ao analisar arquivo');
         }
       } catch (err: any) {
         setStatusMessage(`⚠️ ${err.message}`);

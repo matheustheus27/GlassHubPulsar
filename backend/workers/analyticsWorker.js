@@ -77,6 +77,12 @@ class AnalyticsWorker {
 
   init() {
     queueManager.registerWorker('analytics', this.processJob.bind(this));
+
+    // RabbitMQ via MessageBroker (primary, with InMemory fallback)
+    const messageBroker = require('../messaging/MessageBroker');
+    messageBroker.consume('analytics.ats', this.processJob.bind(this)).catch(err =>
+      logger.warn('[AnalyticsWorker] MessageBroker consume note:', err.message)
+    );
   }
 
   /**
@@ -214,56 +220,128 @@ class AnalyticsWorker {
 
   calculateHeuristicScore(doc, lang = 'pt-BR') {
     const isPt = lang.startsWith('pt');
-    const skillsCount = (doc.skills?.skills || []).reduce((acc, cat) => acc + (cat.items?.length || 0), 0);
-    const expCount = doc.experiences?.experiences?.length || 0;
-    const projCount = doc.projects?.projects?.length || 0;
 
+    const candidateName = doc.personalDetails?.name || doc.personal?.name || '';
+    const candidateTitle = (doc.personalDetails?.title || doc.personal?.title || '').toLowerCase();
+    const summaryText = doc.summaryDetails?.summary || doc.summary?.summary || '';
+    const skillCats = doc.skillsDetails?.skills || doc.skills?.skills || [];
+    const skillsCount = skillCats.reduce((acc, cat) => acc + (cat.items?.length || 0), 0);
+    const expList = doc.experienceDetails?.experiences || doc.experiences?.experiences || [];
+    const projList = doc.projectDetails?.projects || doc.projects?.projects || [];
+
+    // 1. Content Completeness Score (Base 0 - 30)
+    let completenessScore = 0;
+    if (candidateName && candidateName.length > 3) completenessScore += 5;
+    if (candidateTitle && candidateTitle.length > 3) completenessScore += 5;
+    if (summaryText && summaryText.length > 40) completenessScore += 5;
+    if (skillsCount >= 4) completenessScore += 5;
+    if (expList.length >= 1) completenessScore += 5;
+    if (projList.length >= 1) completenessScore += 5;
+
+    // 2. Title Context & Alignment (Base 0 - 25)
+    let titleAlignmentScore = 20;
+    const titleKeywords = candidateTitle.split(/\s+/).filter(w => w.length > 3 && !['de', 'para', 'com', 'e', 'em'].includes(w));
+    if (titleKeywords.length > 0 && expList.length > 0) {
+      const expText = expList.map(e => `${e.position} ${e.company} ${e.bullets?.join(' ')}`).join(' ').toLowerCase();
+      const matchesTitle = titleKeywords.some(kw => expText.includes(kw));
+      if (!matchesTitle) {
+        titleAlignmentScore = 8; // Penalty for disconnect between title and experiences
+      }
+    } else if (!candidateTitle) {
+      titleAlignmentScore = 5;
+    }
+
+    // 3. Impact & Quantifiable Metrics Score (Base 0 - 25)
+    let metricBulletsCount = 0;
+    let totalBulletsCount = 0;
+    expList.forEach(e => {
+      (e.bullets || []).forEach(b => {
+        totalBulletsCount++;
+        if (/(\d+%|\d+\s*k|\$\d+|\b\d{2,}\b|\b\d+\s*membros|\b\d+\s*usuários|\b\d+\s*anos)/i.test(b)) {
+          metricBulletsCount++;
+        }
+      });
+    });
+    projList.forEach(p => {
+      (p.bullets || []).forEach(b => {
+        totalBulletsCount++;
+        if (/(\d+%|\d+\s*k|\$\d+|\b\d{2,}\b)/i.test(b)) {
+          metricBulletsCount++;
+        }
+      });
+    });
+
+    const metricRatio = totalBulletsCount > 0 ? (metricBulletsCount / totalBulletsCount) : 0;
+    let impactScore = Math.round(metricRatio * 25);
+    if (totalBulletsCount === 0) impactScore = 5;
+
+    // 4. Keyword Taxonomy Matching (Base 0 - 20)
     const taxonomyResult = this.evaluateKeywordsTaxonomy(doc, lang);
     const matchedCount = taxonomyResult.matchedConcepts.length;
+    const keywordScore = Math.min(20, matchedCount * 2.5);
 
-    const overallScore = Math.min(98, Math.max(70, 70 + (skillsCount > 8 ? 10 : 4) + (expCount >= 2 ? 8 : 4) + Math.min(matchedCount * 2, 10)));
+    // Calculate Final Rigorous Score
+    let overallScore = Math.round(completenessScore + titleAlignmentScore + impactScore + keywordScore);
+
+    // Strict caps for incomplete or unquantified resumes
+    if (totalBulletsCount > 0 && metricBulletsCount === 0) {
+      overallScore = Math.min(overallScore, 72); // Cap at 72 if no quantifiable metrics exist
+    }
+    if (expList.length === 0 || skillsCount < 3) {
+      overallScore = Math.min(overallScore, 58); // Cap at 58 if sparse
+    }
+
+    overallScore = Math.min(98, Math.max(38, overallScore));
 
     return {
       overallScore,
       summary: isPt
-        ? `Excelente perfil técnico com ${matchedCount} competências estruturadas reconhecidas pela triagem ATS, histórico profissional validado e ótima densidade visual para triagem corporativa.`
-        : `Strong technical profile with ${matchedCount} recognized core ATS competencies, verified professional history, and optimized visual density for enterprise screening.`,
+        ? (overallScore >= 85 
+            ? `Currículo altamente competitivo com Score ATS ${overallScore}/100. Excelente alinhamento de cargo, densidade de palavras-chave e métricas de impacto.`
+            : (overallScore >= 68
+                ? `Perfil intermediário com Score ATS ${overallScore}/100. Para alcançar 85+, inclua mais métricas quantificáveis (%) e conecte o título do cargo às conquistas das experiências.`
+                : `Perfil necessita de ajustes estruturais (Score ATS ${overallScore}/100). Adicione resumo profissional, expanda as competências técnicas e detalhe resultados nas experiências.`))
+        : (overallScore >= 85
+            ? `Highly competitive resume with ATS Score ${overallScore}/100. Strong role alignment, keyword density, and quantified impact.`
+            : `Intermediate profile with ATS Score ${overallScore}/100. Quantify impact metrics (%) and align candidate title with experience achievements to cross 85+.`),
       missingKeywords: taxonomyResult.missingKeywords,
       actionVerbsDensity: {
-        score: 90,
+        score: Math.round(Math.min(95, 60 + (totalBulletsCount * 4))),
         strongVerbsFound: isPt ? ["Desenvolveu", "Implementou", "Liderou", "Otimizou", "Arquiteta", "Integrou"] : ["Architected", "Spearheaded", "Optimized", "Engineered", "Integrated"],
-        weakPhrasesToReplace: isPt ? ["Trabalhou com", "Responsável por"] : ["Worked with", "Responsible for"]
+        weakPhrasesToReplace: isPt ? ["Trabalhou com", "Responsável por", "Ajudou a"] : ["Worked with", "Responsible for", "Helped with"]
       },
       structuralClarity: {
-        score: 92,
+        score: Math.min(95, Math.max(50, completenessScore * 3)),
         feedback: isPt
-          ? "Hierarquia de seções bem definida com alta legibilidade para parsers ATS corporativos."
-          : "Well-defined section hierarchy with high readability for enterprise ATS parsers."
+          ? (titleAlignmentScore < 15 
+              ? "Atenção: O título principal do candidato difere dos cargos listados nas experiências. Alinhe os títulos."
+              : "Hierarquia de seções bem definida e padronizada para o padrão A4.")
+          : "Section hierarchy standardized for A4 page screening."
       },
       layoutConsistency: {
-        score: 94,
+        score: Math.min(96, Math.max(60, 65 + skillsCount * 2)),
         feedback: isPt
-          ? "Excelente equilíbrio visual e densidade de informação ideal para o padrão A4."
-          : "Excellent visual balance and information density optimized for standard A4."
+          ? (metricBulletsCount === 0 
+              ? "Recomendação Crítica: Nenhuma métrica quantitativa (% ou valores) foi encontrada nas descrições de cargo."
+              : "Boa densidade visual e distribuição de competências.")
+          : "Visual balance and information density optimized for standard A4."
       },
       actionableRecommendations: [
         {
           priority: "HIGH",
-          category: isPt ? "Palavras-chave & Métricas" : "Keywords & Metrics",
+          category: isPt ? "Métricas de Impacto Quantificáveis" : "Quantified Impact Metrics",
           recommendation: isPt
-            ? (taxonomyResult.missingKeywords.length > 0 
-                ? `Considere mencionar competências complementares como: ${taxonomyResult.missingKeywords.slice(0, 2).join(', ')}.`
-                : "Seu currículo cobre as principais palavras-chave do setor. Inclua métricas quantificáveis (ex: 'redução de 30% no tempo de resposta').")
-            : (taxonomyResult.missingKeywords.length > 0
-                ? `Consider highlighting complementary skills such as: ${taxonomyResult.missingKeywords.slice(0, 2).join(', ')}.`
-                : "Your resume covers top industry keywords. Focus on quantifiable impact metrics (e.g. 'reduced latency by 30%').")
+            ? (metricBulletsCount === 0
+                ? "Adicione porcentagens e números reais aos bullets (ex: 'redução de latência em 40%', 'gestão de 500k eventos/dia')."
+                : `Você possui ${metricBulletsCount} métricas nos bullets. Continue quantificando resultados em todas as experiências.`)
+            : "Include percentage and numerical metrics across experience bullet points."
         },
         {
-          priority: "MEDIUM",
-          category: isPt ? "Estrutura de Projetos" : "Project Structure",
+          priority: titleAlignmentScore < 15 ? "HIGH" : "MEDIUM",
+          category: isPt ? "Alinhamento do Título do Cargo" : "Role Title Alignment",
           recommendation: isPt
-            ? "Mantenha os bullets de experiências profissionais focados no formato Ação + Desafio + Resultado."
-            : "Structure experience bullet points in the Action + Challenge + Quantified Result format."
+            ? `Garanta que o título '${candidateTitle || 'do candidato'}' esteja refletido nos cargos e tecnologias principais.`
+            : "Ensure candidate role title matches technical competencies."
         }
       ]
     };

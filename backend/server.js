@@ -34,9 +34,9 @@ app.use(cors({
   credentials: true
 }));
 
-// 2. Body Parser & Cookie Parser (Custom minimal cookie parser)
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+// 2. Body Parser & Cookie Parser (Custom minimal cookie parser, 50MB limit for base64 documents)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use((req, res, next) => {
   req.cookies = {};
@@ -75,7 +75,11 @@ setupBuilderRoutes(app);
 setupDebugRoutes(app);
 setupOllamaRoutes(app);
 
-// 7. Background Workers Initialization (PDF, Translation, Analytics ATS, Notifications)
+// 7. Message Broker (RabbitMQ with InMemory fallback)
+const messageBroker = require('./messaging/MessageBroker');
+messageBroker.init().catch(err => logger.warn('[MessageBroker] Startup init warning:', err.message));
+
+// 8. Background Workers Initialization (PDF, Translation, Analytics ATS, Notifications)
 try {
   require('./workers/pdfWorker');
   require('./workers/translationWorker');
@@ -95,11 +99,28 @@ app.get('/health', (req, res) => {
   });
 });
 
+// 9. API 404 JSON Fallback (Guarantees API endpoints return JSON, never HTML)
+app.use('/api', (req, res) => {
+  return res.status(404).json({
+    success: false,
+    error: `Rota de API não encontrada: ${req.method} ${req.originalUrl}`
+  });
+});
+
+// 10. Global Express JSON Error Handler (Traps unhandled route errors and returns JSON)
+app.use((err, req, res, next) => {
+  logger.error('[Server] Trapped API error:', err);
+  const statusCode = err.status || err.statusCode || 500;
+  return res.status(statusCode).json({
+    success: false,
+    error: err.message || 'Erro interno no servidor de processamento de documentos.'
+  });
+});
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   logger.info(`GlassHub Document Engine & API Server listening on port ${PORT}`);
-  // Asynchronously bootstrap PostgreSQL schema & seed in background
   try {
     const initDb = require('./prisma/init-db');
     initDb().catch(err => logger.warn('[InitDB] Background sync note:', err.message || err));

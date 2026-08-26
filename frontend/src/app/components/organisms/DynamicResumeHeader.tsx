@@ -27,11 +27,11 @@ export const DynamicResumeHeader: React.FC<DynamicResumeHeaderProps> = ({
       className="flex flex-col gap-2 pb-6 border-b"
       style={{ borderBottomColor: borderColor }}
     >
-      <Heading level={1} style={style?.name}>
-        {name}
+      <Heading level={1} style={{ ...style?.name, textTransform: 'uppercase' }}>
+        {name ? name.toUpperCase() : ''}
       </Heading>
-      <Subheading style={style?.title}>
-        {title}
+      <Subheading style={{ ...style?.title, textTransform: 'uppercase' }}>
+        {title ? title.toUpperCase() : ''}
       </Subheading>
       <BalancedContactGrid items={contacts} style={style?.contact} />
     </header>

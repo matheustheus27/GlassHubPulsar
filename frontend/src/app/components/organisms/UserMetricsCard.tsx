@@ -20,14 +20,34 @@ interface UserMetricsCardProps {
 
 export function calculateFillQuality(doc: any): number {
   let score = 0;
-  if (doc?.personalDetails?.name) score += 15;
-  if (doc?.personalDetails?.title) score += 15;
-  if (doc?.personalDetails?.contact?.email?.email) score += 10;
-  if (doc?.personalDetails?.contact?.phone?.phone) score += 10;
-  if (doc?.summaryDetails?.summary?.length > 40) score += 15;
-  if (doc?.skillsDetails?.skills?.length >= 2) score += 15;
-  if (doc?.experienceDetails?.experiences?.length >= 1) score += 10;
-  if (doc?.educationDetails?.educations?.length >= 1) score += 10;
+  // Personal Details: Max 15%
+  if (doc?.personalDetails?.name && doc.personalDetails.name.length > 2) score += 4;
+  if (doc?.personalDetails?.title && doc.personalDetails.title.length > 2) score += 4;
+  if (doc?.personalDetails?.contact?.email?.email) score += 4;
+  if (doc?.personalDetails?.contact?.phone?.phone) score += 3;
+
+  // Summary: Max 15%
+  if (doc?.summaryDetails?.summary && doc.summaryDetails.summary.length > 40) score += 15;
+
+  // Skills: Max 20%
+  const skillCount = (doc?.skillsDetails?.skills || []).reduce((acc: number, c: any) => acc + (c.items?.length || 0), 0);
+  if (skillCount >= 6) score += 20;
+  else if (skillCount >= 3) score += 12;
+  else if (skillCount >= 1) score += 5;
+
+  // Experience: Max 25%
+  const expCount = doc?.experienceDetails?.experiences?.length || 0;
+  if (expCount >= 2) score += 25;
+  else if (expCount === 1) score += 15;
+
+  // Education: Max 15%
+  const eduCount = doc?.educationDetails?.educations?.length || 0;
+  if (eduCount >= 1) score += 15;
+
+  // Projects: Max 10%
+  const projCount = doc?.projectDetails?.projects?.length || 0;
+  if (projCount >= 1) score += 10;
+
   return Math.min(100, score);
 }
 
@@ -45,7 +65,7 @@ export const UserMetricsCard: React.FC<UserMetricsCardProps> = ({
   const { t } = useI18n();
   const quality = calculateFillQuality(documentData);
   const currentTemplate = template || activeTemplate || 'GlassModern';
-  const score = atsScore ?? estimatedScore ?? 88;
+  const scoreDisplay = (atsScore || estimatedScore) ? `${atsScore || estimatedScore}/100` : '--';
   const triggerATS = onOpenATS || onRunAnalysis || (() => {});
   const handleColorChange = onSelectColor || (() => {});
 
@@ -72,7 +92,7 @@ export const UserMetricsCard: React.FC<UserMetricsCardProps> = ({
             <span className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
               {t('metricAtsEstimated')}
             </span>
-            <span className="text-xs md:text-sm font-black text-cyan-300">⚡ {score}/100</span>
+            <span className="text-xs md:text-sm font-black text-cyan-300">⚡ {scoreDisplay}</span>
           </div>
           <span className="text-xs text-slate-400 font-semibold">{t('metricAnalyze')}</span>
         </div>

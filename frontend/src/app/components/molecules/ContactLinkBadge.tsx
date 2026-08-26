@@ -1,4 +1,5 @@
 import React, { CSSProperties } from 'react';
+import { GlassIcon } from '../atoms/GlassIcon';
 
 interface ContactLinkBadgeProps {
   title: string;
@@ -15,12 +16,15 @@ export const ContactLinkBadge: React.FC<ContactLinkBadgeProps> = ({
   style,
   className = ''
 }) => {
+  const primaryIconColor = (style as any)?.iconColor || style?.color;
+  const iconColorStyle = primaryIconColor ? { color: primaryIconColor, borderColor: `${primaryIconColor}50` } : undefined;
+
   const content = (
     <span
       style={style}
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer border shadow-sm ${className}`}
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer border shadow-sm backdrop-blur-md hover:scale-105 ${className}`}
     >
-      <span className="text-sm shrink-0">{icon}</span>
+      <GlassIcon name={icon} size={13} className="p-1" style={iconColorStyle} />
       <span className="truncate">{title}</span>
     </span>
   );

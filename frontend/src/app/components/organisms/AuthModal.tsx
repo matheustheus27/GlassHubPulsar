@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassSurface } from '../atoms/GlassSurface';
 import { Heading, GradientText } from '../atoms/Typography';
 import { Button } from '../atoms/Button';
@@ -25,6 +25,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTab(initialTab);
+      setError(null);
+    }
+  }, [isOpen, initialTab]);
 
   if (!isOpen) return null;
 

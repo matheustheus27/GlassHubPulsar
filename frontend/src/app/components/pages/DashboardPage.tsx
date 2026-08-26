@@ -14,7 +14,7 @@ import { PDFProgressCard } from '../molecules/PDFProgressCard';
 import { Toast } from '../Toast';
 import { GlassSurface } from '../atoms/GlassSurface';
 import { TemplateType } from '../molecules/TemplateSelector';
-import { defaultDocumentData } from '../../utils/documentSchema';
+import { defaultDocumentData, createCleanDocumentData } from '../../utils/documentSchema';
 import { buildResumePayload } from '../../export/buildResumePayload';
 import { buildCoverPayload } from '../../export/buildCoverPayload';
 import { generateColorPalette } from '../../utils/colorEngine';
@@ -144,19 +144,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
         if (data?.data && (data.data.personalDetails?.name || data.data.summaryDetails?.summary)) {
           setDocData(data.data);
         } else if (user?.email) {
-          // Pre-fill user information on top of template schema
-          setDocData((prev: any) => {
-            const draft = JSON.parse(JSON.stringify(prev || defaultDocumentData));
-            draft.personalDetails = {
-              ...draft.personalDetails,
-              name: user.name || draft.personalDetails?.name || '',
-              contact: {
-                ...draft.personalDetails?.contact,
-                email: { email: user.email, icon: '✉️' }
-              }
-            };
-            return draft;
-          });
+          // Initialize clean structure for new user without pre-existing mock data
+          setDocData(createCleanDocumentData(user));
         }
       })
       .catch(() => { });
@@ -296,9 +285,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
     }
   };
 
+  // Auto-reset isExporting when PDF worker completes or stops being active
+  useEffect(() => {
+    if (!pdfExportState.isActive) {
+      setIsExporting(false);
+    }
+  }, [pdfExportState.isActive]);
+
   // Export PDF via Worker
   const handleExportPDF = async () => {
     setIsExporting(true);
+
+    // Safety fallback timer to prevent button stuck state
+    const safetyTimer = setTimeout(() => {
+      setIsExporting(false);
+    }, 20000);
 
     try {
       const isResume = activeTab === 'resume';
@@ -331,6 +332,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
 
       setToast({ message: 'Processamento de PDF iniciado no worker!', type: 'success' });
     } catch (err: any) {
+      clearTimeout(safetyTimer);
       setToast({ message: err.message || 'Erro na exportação de PDF', type: 'error' });
       setIsExporting(false);
     }
@@ -427,9 +429,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
 
           {/* MAIN WORKSPACE GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            {/* FORM EDITOR COLUMN */}
+            {/* FORM EDITOR COLUMN (STICKY SCROLL-FOLLOWING) */}
             {(viewMode === 'split' || viewMode === 'formOnly') && (
-              <div className={viewMode === 'split' ? 'lg:col-span-6 xl:col-span-5' : 'lg:col-span-12 max-w-4xl mx-auto w-full'}>
+              <div className={`${viewMode === 'split' ? 'lg:col-span-6 xl:col-span-5' : 'lg:col-span-12 max-w-4xl mx-auto w-full'} sticky top-20 self-start max-h-[calc(100vh-100px)] overflow-y-auto pr-1`}>
                 <DocumentFormEditor
                   documentData={docData}
                   onChange={setDocData}
@@ -513,8 +515,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
             )}
           </div>
 
-          {/* FLOATING ASYNC WORKER PROGRESS NOTIFICATIONS (TOP VISUAL PRIORITY) */}
-          <div className="fixed bottom-24 right-6 z-50 flex flex-col gap-3 max-w-sm pointer-events-auto">
+          {/* FLOATING ASYNC WORKER PROGRESS NOTIFICATIONS (TOP RIGHT STACKED) */}
+          <div className="fixed top-24 right-6 z-50 flex flex-col gap-3 max-w-sm pointer-events-auto">
             {translationState.isActive && (
               <TranslationProgressCard state={translationState} onDismiss={resetTranslation} />
             )}
@@ -529,8 +531,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
             onOpenATS={() => setOpenATSScore(true)}
             onOpenAI={() => setOpenAIChat(true)}
             onOpenAIChat={() => setOpenAIChat(true)}
-            atsScore={atsReport?.overallScore || 88}
-            estimatedScore={atsReport?.overallScore || 88}
+            atsScore={atsReport?.overallScore}
+            estimatedScore={atsReport?.overallScore}
           />
 
           {/* ATS SCORE MODAL */}

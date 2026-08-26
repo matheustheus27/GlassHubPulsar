@@ -31,10 +31,13 @@ class Logger {
   }
 
   async persistToDatabase(level, message, context = {}) {
-    const prisma = this.getPrisma();
-    if (!prisma || !prisma.systemExecutionLog) return;
+    if (this.isPersisting) return;
+    this.isPersisting = true;
 
     try {
+      const prisma = this.getPrisma();
+      if (!prisma || !prisma.systemExecutionLog) return;
+
       await prisma.systemExecutionLog.create({
         data: {
           service: this.serviceName,
@@ -49,6 +52,8 @@ class Logger {
       });
     } catch (err) {
       // Avoid recursive logger crashes
+    } finally {
+      this.isPersisting = false;
     }
   }
 

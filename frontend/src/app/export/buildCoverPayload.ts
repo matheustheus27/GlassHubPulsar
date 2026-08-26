@@ -14,12 +14,35 @@ export function buildCoverPayload(
   const networking = personal.contact?.networking || {};
   const networkContacts: Array<{ title: string; link: string; icon: string }> = [];
 
+  const knownKeys = ['portfolio', 'linkedin', 'github', 'twitter', 'instagram', 'facebook'];
   if (networking.portfolio?.url) networkContacts.push({ title: networking.portfolio.name || 'Portfólio', link: networking.portfolio.url, icon: networking.portfolio.icon || '🌐' });
   if (networking.linkedin?.url) networkContacts.push({ title: networking.linkedin.name || 'LinkedIn', link: networking.linkedin.url, icon: networking.linkedin.icon || '💼' });
   if (networking.github?.url) networkContacts.push({ title: networking.github.name || 'GitHub', link: networking.github.url, icon: networking.github.icon || '🐙' });
   if (networking.twitter?.url) networkContacts.push({ title: networking.twitter.name || 'X', link: networking.twitter.url, icon: networking.twitter.icon || '𝕏' });
   if (networking.instagram?.url) networkContacts.push({ title: networking.instagram.name || 'Instagram', link: networking.instagram.url, icon: networking.instagram.icon || '📷' });
   if (networking.facebook?.url) networkContacts.push({ title: networking.facebook.name || 'Facebook', link: networking.facebook.url, icon: networking.facebook.icon || '📘' });
+
+  // Custom networking keys
+  for (const [key, val] of Object.entries(networking as Record<string, any>)) {
+    if (val && (val.url || val.name || val.link) && !knownKeys.includes(key)) {
+      networkContacts.push({
+        title: val.name || val.title || key,
+        link: val.url || val.link || '#',
+        icon: val.icon || '🔗'
+      });
+    }
+  }
+
+  // Direct Array fallback if personal.contact is an array
+  if (Array.isArray(personal.contact)) {
+    personal.contact.forEach((c: any) => {
+      networkContacts.push({
+        title: c.title || c.name || c.email || c.phone || '',
+        link: c.link || c.url || '#',
+        icon: c.icon || '🔗'
+      });
+    });
+  }
 
   return {
     settings: {
@@ -41,7 +64,7 @@ export function buildCoverPayload(
         name: personal.name || 'Candidate',
         title: personal.title || '',
         location: {
-          title: personal.location?.location || '',
+          title: personal.location?.location || personal.location?.title || '',
           link: personal.location?.link || '',
           icon: personal.location?.icon || '📍'
         },

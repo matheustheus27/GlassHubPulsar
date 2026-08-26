@@ -27,8 +27,8 @@ async function waitForDatabase(maxAttempts = 15, delayMs = 2000) {
 
 async function syncSchema() {
   try {
-    logger.info('[InitDB] Pushing Prisma schema to PostgreSQL (npx prisma db push --skip-generate)...');
-    execSync('npx prisma db push --skip-generate', {
+    logger.info('[InitDB] Pushing Prisma schema to PostgreSQL (npx prisma db push --skip-generate --accept-data-loss)...');
+    execSync('npx prisma db push --skip-generate --accept-data-loss', {
       cwd: path.resolve(__dirname, '..'),
       stdio: 'inherit'
     });

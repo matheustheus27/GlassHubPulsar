@@ -44,25 +44,129 @@ function getPuppeteerLaunchOptions() {
   return options;
 }
 
-function formatPdfFileName(candidateName = "CURRICULO", language = "pt-BR") {
+function formatPdfFileName(candidateName = "Curriculo", language = "pt-BR") {
   const clean = String(candidateName)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .replace(/[^a-zA-Z0-9\s_-]/g, "");
 
+  const toTitleCase = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
   const parts = clean.split(/\s+/).filter(Boolean);
-  let namePart = "CURRICULO";
+  let namePart = "Curriculo";
   if (parts.length === 1) {
-    namePart = parts[0].toUpperCase();
+    namePart = toTitleCase(parts[0]);
   } else if (parts.length >= 2) {
-    const firstName = parts[0].toUpperCase();
-    const lastName = parts[parts.length - 1].toUpperCase();
+    const firstName = toTitleCase(parts[0]);
+    const lastName = toTitleCase(parts[parts.length - 1]);
     namePart = `${firstName}_${lastName}`;
   }
 
   const cleanLang = (language || "pt-BR").trim();
   return `${namePart}-${cleanLang}.pdf`;
+}
+
+/**
+ * Intelligent A4 Vector PDF Pagination Engine
+ * Evaluates rendered element heights in Puppeteer DOM, injects page breaks
+ * without cutting cards, and adds section continuation headers (CONTINUAÇÃO).
+ */
+async function generatePaginatedResumePdf(fullHtmlWithTailwind) {
+  const launchOpts = getPuppeteerLaunchOptions();
+  if (!launchOpts.args.includes('--font-render-hinting=none')) {
+    launchOpts.args.push('--font-render-hinting=none');
+  }
+  const browser = await puppeteer.launch(launchOpts);
+
+  try {
+    const page = await browser.newPage();
+
+    // 1. Set exact A4 viewport (794x1123 @ scale 2 for crisp vector typography)
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+
+    // 2. Set HTML content & wait for DOM (no external network needed — all self-contained)
+    await page.setContent(fullHtmlWithTailwind, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.evaluateHandle('document.fonts.ready');
+
+    // 3. Define A4 dimensions (297mm = ~1122.5px @ 96 DPI, padding 80px)
+    const A4_HEIGHT_PX = 1122.5;
+    const PAGE_PADDING_Y_PX = 80;
+    const USABLE_PAGE_HEIGHT = A4_HEIGHT_PX - PAGE_PADDING_Y_PX;
+
+    // 4. Execute DOM height evaluation and page break injection
+    await page.evaluate((maxPageHeight) => {
+      // Add global print-color-adjust and page break CSS rules
+      const styleEl = document.createElement('style');
+      styleEl.innerHTML = `
+        @page { size: A4; margin: 0; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        [data-printable-item] { break-inside: avoid; page-break-inside: avoid; }
+        .custom-page-break { break-before: page; page-break-before: always; }
+      `;
+      document.head.appendChild(styleEl);
+
+      const sections = Array.from(document.querySelectorAll('[data-printable-section]'));
+      let currentAccumulatedHeight = 0;
+
+      sections.forEach((section) => {
+        const sectionTitleEl = section.querySelector('[data-section-title]');
+        const sectionTitleText = sectionTitleEl ? sectionTitleEl.innerText.trim() : '';
+        const items = Array.from(section.querySelectorAll('[data-printable-item]'));
+
+        if (items.length === 0) {
+          const blockHeight = section.offsetHeight;
+          if (currentAccumulatedHeight + blockHeight > maxPageHeight && currentAccumulatedHeight > 0) {
+            section.style.breakBefore = 'page';
+            currentAccumulatedHeight = blockHeight;
+          } else {
+            currentAccumulatedHeight += blockHeight;
+          }
+          return;
+        }
+
+        if (sectionTitleEl) {
+          currentAccumulatedHeight += sectionTitleEl.offsetHeight;
+        }
+
+        items.forEach((item) => {
+          const itemHeight = item.offsetHeight;
+
+          if (currentAccumulatedHeight + itemHeight > maxPageHeight && currentAccumulatedHeight > 0) {
+            const pageBreak = document.createElement('div');
+            pageBreak.className = 'custom-page-break';
+            pageBreak.style.breakBefore = 'page';
+            pageBreak.style.marginTop = '24px';
+
+            if (sectionTitleText) {
+              const contHeader = document.createElement('div');
+              contHeader.className = sectionTitleEl ? sectionTitleEl.className : 'section-title';
+              contHeader.innerText = `${sectionTitleText} (CONTINUAÇÃO)`;
+              contHeader.style.marginBottom = '16px';
+              pageBreak.appendChild(contHeader);
+            }
+
+            item.parentNode?.insertBefore(pageBreak, item);
+            currentAccumulatedHeight = itemHeight + (sectionTitleEl ? sectionTitleEl.offsetHeight : 0);
+          } else {
+            currentAccumulatedHeight += itemHeight;
+          }
+        });
+      });
+    }, USABLE_PAGE_HEIGHT);
+
+    // 5. Generate Vector PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      preferCSSPageSize: true,
+      margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+    });
+
+    return Buffer.from(pdfBuffer);
+  } finally {
+    await browser.close().catch(() => {});
+  }
 }
 
 class PDFWorker {
@@ -71,17 +175,29 @@ class PDFWorker {
   }
 
   init() {
+    // Legacy BullMQ/Redis queue (backward compat for direct processJob calls)
     queueManager.registerWorker('pdf', this.processJob.bind(this));
+
+    // RabbitMQ via MessageBroker (primary, with InMemory fallback)
+    const messageBroker = require('../messaging/MessageBroker');
+    messageBroker.consume('pdf.render', this.processJob.bind(this)).catch(err =>
+      logger.warn('[PDFWorker] MessageBroker consume registration note:', err.message)
+    );
+
+    logger.info('[PDFWorker] Initialized — consuming q.pdf.render via MessageBroker + BullMQ fallback.');
   }
 
   getPdf(id) {
     return pdfStore.get(id);
   }
 
-  /**
-   * Generates Hybrid Executive System Status Report HTML (Datadog + PostgreSQL) with Smart A4 Pagination
-   */
   generateSystemReportHtml(systemSnapshot, queues = {}, databaseLogs = [], datadog = {}) {
+    return generatePaginatedResumePdf.generateSystemReportHtml
+      ? generatePaginatedResumePdf.generateSystemReportHtml(systemSnapshot, queues, databaseLogs, datadog)
+      : this.buildSystemReportHtml(systemSnapshot, queues, databaseLogs, datadog);
+  }
+
+  buildSystemReportHtml(systemSnapshot, queues = {}, databaseLogs = [], datadog = {}) {
     const logs = databaseLogs || [];
     const MAX_LOGS_PAGE_1 = 6;
     const MAX_LOGS_PER_EXTRA_PAGE = 16;
@@ -136,6 +252,7 @@ class PDFWorker {
             background: #030712; color: #f8fafc;
             margin: 0; padding: 0;
             -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .a4-page {
             width: 794px;
@@ -192,7 +309,6 @@ class PDFWorker {
         </style>
       </head>
       <body>
-        <!-- PAGE 1: EXECUTIVE SYSTEM SNAPSHOT & RECENT TRACES -->
         <div class="a4-page">
           <div>
             <div class="header">
@@ -200,9 +316,7 @@ class PDFWorker {
               <div class="subtitle">Relatório Unificado de Telemetria (Datadog APM + PostgreSQL Execution Logs) | ${new Date().toLocaleString('pt-BR')}</div>
             </div>
 
-            <!-- METRIC CARDS ROW -->
             <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-              <!-- CLUSTER HEALTH -->
               <div class="card" style="flex: 1; margin-bottom: 0;">
                 <div class="card-title">Saúde do Cluster & APM</div>
                 <div class="metric-row">
@@ -223,7 +337,6 @@ class PDFWorker {
                 </div>
               </div>
 
-              <!-- PERFORMANCE METRICS -->
               <div class="card" style="flex: 1; margin-bottom: 0;">
                 <div class="card-title">Métricas de Vazão & IA</div>
                 <div class="metric-row">
@@ -241,7 +354,6 @@ class PDFWorker {
               </div>
             </div>
 
-            <!-- WORKER QUEUES -->
             <div class="card">
               <div class="card-title">Filas de Mensageria Ativas (BullMQ / Redis)</div>
               <div style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -249,7 +361,6 @@ class PDFWorker {
               </div>
             </div>
 
-            <!-- RECENT POSTGRESQL TRACES -->
             <div class="card" style="margin-bottom: 0;">
               <div class="card-title">Traces de Execução Recentes (PostgreSQL Logs)</div>
               <table>
@@ -269,14 +380,12 @@ class PDFWorker {
             </div>
           </div>
 
-          <!-- PAGE 1 FOOTER -->
           <div class="footer">
             <span>GlassHub Enterprise Infrastructure &copy; 2026</span>
             <span>Página 1 de ${totalPages}</span>
           </div>
         </div>
 
-        <!-- ADDITIONAL PAGES IF LOGS EXCEED PAGE 1 -->
         ${extraPages.map((pageLogs, pageIdx) => `
           <div class="a4-page">
             <div>
@@ -331,48 +440,33 @@ class PDFWorker {
       memory: process.memoryUsage().heapUsed
     });
 
-    // SSE: Progress 30%
     sseController.broadcast({
       type: 'PDF_PROGRESS',
       jobId,
       progress: 30,
-      step: 'Iniciando navegador Chromium headless e calculando viewport...'
+      step: 'Iniciando navegador Chromium headless e calculando viewport A4...',
+      fileName
     });
 
-    let browser;
     try {
-      const launchOpts = getPuppeteerLaunchOptions();
-      browser = await puppeteer.launch(launchOpts);
-
-      const page = await browser.newPage();
-      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
-
-      // SSE: Progress 60%
       sseController.broadcast({
         type: 'PDF_PROGRESS',
         jobId,
         progress: 60,
-        step: 'Compilando layout vetorial e formatando CSS Glassmorphic...'
+        step: 'Compilando layout vetorial e calculando paginação inteligente...'
       });
 
       let html;
       if (isSystemReport) {
         const snapshot = systemSnapshot || metrics.getSnapshot();
-        html = this.generateSystemReportHtml(snapshot, queues, databaseLogs, datadog);
+        html = this.buildSystemReportHtml(snapshot, queues, databaseLogs, datadog);
       } else if (type === 'cover') {
         html = CoverBuilder.build(document);
       } else {
         html = ResumeBuilder.build(document);
       }
 
-      await page.setContent(html, { waitUntil: ['domcontentloaded', 'networkidle0'], timeout: 60000 });
-      await page.evaluateHandle('document.fonts.ready');
-
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '0mm', bottom: '0mm', left: '0mm', right: '0mm' }
-      });
+      const pdfBuffer = await generatePaginatedResumePdf(html);
 
       const downloadUrl = `/api/pdf/download/${jobId}`;
 
@@ -434,10 +528,6 @@ class PDFWorker {
         step: `Falha na geração do PDF: ${err.message}`
       });
       throw err;
-    } finally {
-      if (browser) {
-        await browser.close().catch(() => {});
-      }
     }
   }
 }

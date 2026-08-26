@@ -13,7 +13,7 @@ function generateStyles(s = {}) {
 
   return `
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+      /* Fonts resolved via system cascade — no network calls in Docker/Puppeteer */
 
       @page { size: A4; margin: 0mm !important; }
       * { box-sizing: border-box; }
@@ -47,6 +47,11 @@ function generateStyles(s = {}) {
         border-radius: 8px; padding: 12px 16px;
         display: flex; flex-direction: column; gap: 6px;
         position: relative;
+        break-inside: avoid !important; page-break-inside: avoid !important;
+      }
+
+      .item-block, .skill-group, .education-item, .experience-item, .project-item {
+        break-inside: avoid !important; page-break-inside: avoid !important;
       }
 
       h1 { 
@@ -55,6 +60,7 @@ function generateStyles(s = {}) {
         color: ${isLight ? '#0f172a' : (title.primary.fontColor || '#f8fafc')}; 
         font-weight: 800;
         margin: 0; padding: 0; text-transform: uppercase; letter-spacing: 0px;
+        break-after: avoid !important; page-break-after: avoid !important;
       }
 
       h2.candidate-subtitle { 
@@ -73,6 +79,8 @@ function generateStyles(s = {}) {
         text-transform: uppercase; letter-spacing: 1.5px;
         border-bottom: 1px solid ${card.borderColor}; 
         padding-bottom: 4px; margin-bottom: 2px; 
+        break-after: avoid !important; page-break-after: avoid !important;
+        break-inside: avoid !important; page-break-inside: avoid !important;
       }
 
       .contacts-balanced-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
@@ -96,7 +104,7 @@ function generateStyles(s = {}) {
         justify-content: center;
         width: 14px;
         height: 14px;
-        color: ${isLight ? '#0284c7' : (subtitle.primary.fontColor || '#9ca3af')};
+        color: ${title.primary.fontColor || (isLight ? '#0284c7' : '#9ca3af')};
       }
 
       .svg-icon {

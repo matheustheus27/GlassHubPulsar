@@ -15,7 +15,8 @@ export const BottomFloatingActions: React.FC<BottomFloatingActionsProps> = ({
   atsScore,
   estimatedScore
 }) => {
-  const score = atsScore ?? estimatedScore ?? 88;
+  const hasScore = (atsScore !== undefined && atsScore !== null) || (estimatedScore !== undefined && estimatedScore !== null);
+  const displayScore = hasScore ? (atsScore ?? estimatedScore) : '--';
   const handleAI = onOpenAI || onOpenAIChat || (() => {});
 
   return (
@@ -29,7 +30,7 @@ export const BottomFloatingActions: React.FC<BottomFloatingActionsProps> = ({
       >
         <span className="text-base">📊</span>
         <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">
-          ATS: <strong className="text-white text-sm">{score}</strong>/100
+          ATS: <strong className="text-white text-sm">{displayScore}</strong>{hasScore ? '/100' : ''}
         </span>
       </button>
 

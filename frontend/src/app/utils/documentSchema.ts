@@ -95,3 +95,50 @@ export const defaultDocumentData = {
     signature: 'Alexandre Silveira'
   }
 };
+
+export const createCleanDocumentData = (user?: { name?: string; email?: string } | null) => ({
+  personalDetails: {
+    name: user?.name || '',
+    title: '',
+    contact: {
+      email: { email: user?.email || '', icon: '✉️' },
+      phone: { phone: '', link: '', icon: '📞' },
+      networking: {
+        portfolio: { name: 'Portfólio', url: '', icon: '🌐' },
+        linkedin: { name: 'LinkedIn', url: '', icon: '💼' },
+        github: { name: 'GitHub', url: '', icon: '🐙' }
+      }
+    },
+    location: {
+      location: '',
+      link: '',
+      icon: '📍'
+    }
+  },
+  summaryDetails: {
+    summaryTitle: 'RESUMO PROFISSIONAL',
+    summary: ''
+  },
+  skillsDetails: {
+    skillsTitle: 'COMPETÊNCIAS & TECNOLOGIAS',
+    skills: []
+  },
+  experienceDetails: {
+    experienceTitle: 'HISTÓRICO PROFISSIONAL',
+    experiences: []
+  },
+  educationDetails: {
+    educationTitle: 'FORMAÇÃO ACADÊMICA',
+    educations: []
+  },
+  projectDetails: {
+    projectTitle: 'PROJETOS DE DESTAQUE',
+    projects: []
+  },
+  coverLetterDetails: {
+    greeting: 'Prezados membros do comitê de seleção,',
+    text: [''],
+    valediction: 'Atenciosamente,',
+    signature: user?.name || ''
+  }
+});

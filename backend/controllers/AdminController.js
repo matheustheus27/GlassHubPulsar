@@ -49,12 +49,20 @@ class AdminController {
       const memoryPenalty = heapPercent > 80 ? 15 : 0;
       const compositeHealthScore = Math.max(70, Math.min(100, 100 - errorPenalty - memoryPenalty));
 
+      // 4. Redis Cache & RAG Telemetry Stats
+      const cacheService = require('../services/CacheService');
+      const RAGService = require('../services/RAGService');
+      const cacheStats = cacheService.getStats();
+      const ragStats = RAGService.getStats();
+
       return res.json({
         success: true,
         cluster: 'GlassHub Enterprise Mesh',
         status: 'HEALTHY',
         compositeHealthScore,
         telemetry: snapshot,
+        cache: cacheStats,
+        rag: ragStats,
         datadog: datadogTelemetry,
         databaseLogs: {
           total: totalLogsCount,

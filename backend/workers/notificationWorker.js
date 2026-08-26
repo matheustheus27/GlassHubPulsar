@@ -133,6 +133,12 @@ class NotificationWorker {
 
   init() {
     queueManager.registerWorker('notification', this.processJob.bind(this));
+
+    // RabbitMQ via MessageBroker (primary, with InMemory fallback)
+    const messageBroker = require('../messaging/MessageBroker');
+    messageBroker.consume('notification', this.processJob.bind(this)).catch(err =>
+      logger.warn('[NotificationWorker] MessageBroker consume note:', err.message)
+    );
   }
 
   async processJob(job) {

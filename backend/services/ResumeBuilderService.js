@@ -2,6 +2,7 @@ const BlockFactory = require("../layout/BlockFactory");
 const LayoutEngine = require("../layout/LayoutEngine");
 const ContactLinkOptimizer = require("../layout/ContactLinkOptimizer");
 const { getTheme } = require("../templates/themes");
+const { getFontFaceStyles } = require("../layout/FontEmbedder");
 
 class ResumeBuilderService {
   static build(resume, options = {}) {
@@ -66,7 +67,7 @@ class ResumeBuilderService {
 
     // 4. HTML builder per physical sheet
     const pagesHtml = calculatedPages.map((page, index) => {
-      const pageHeader = index === 0 ? headerHtml : "";
+      const pageHeader = index === 0 ? `<div data-printable-section>${headerHtml}</div>` : "";
 
       let sectionsHtml = "";
       let currentType = null;
@@ -75,7 +76,7 @@ class ResumeBuilderService {
       page.sections.forEach((block) => {
         if (currentType !== block.type) {
           if (activeGroupHtml) {
-            sectionsHtml += `<div class="glass-card">${activeGroupHtml}</div>`;
+            sectionsHtml += `<div class="glass-card" data-printable-section>${activeGroupHtml}</div>`;
             activeGroupHtml = "";
           }
           currentType = block.type;
@@ -94,14 +95,14 @@ class ResumeBuilderService {
             sectionTitle = projTitle;
           }
 
-          activeGroupHtml += `<div class="section-title">${sectionTitle}</div>`;
+          activeGroupHtml += `<div class="section-title" data-section-title>${sectionTitle}</div>`;
         }
 
-        activeGroupHtml += block.html;
+        activeGroupHtml += `<div data-printable-item>${block.html}</div>`;
       });
 
       if (activeGroupHtml) {
-        sectionsHtml += `<div class="glass-card">${activeGroupHtml}</div>`;
+        sectionsHtml += `<div class="glass-card" data-printable-section>${activeGroupHtml}</div>`;
       }
 
       return `
@@ -117,10 +118,9 @@ class ResumeBuilderService {
       <html lang="${cleanLang}">
       <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${p.name || "Curriculum"}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+        ${getFontFaceStyles()}
         ${this.styles(settings)}
       </head>
       <body>

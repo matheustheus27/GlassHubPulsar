@@ -159,6 +159,17 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
     });
   };
 
+  const removeExpBullet = (expIndex: number, bulletIndex: number) => {
+    const updated = [...experiences];
+    if (updated[expIndex]?.bullets) {
+      updated[expIndex].bullets.splice(bulletIndex, 1);
+      onChange({
+        ...documentData,
+        experienceDetails: { ...documentData.experienceDetails, experiences: updated }
+      });
+    }
+  };
+
   const updateExpBullet = (expIndex: number, bulletIndex: number, text: string) => {
     const updated = [...experiences];
     updated[expIndex].bullets[bulletIndex] = text;
@@ -208,9 +219,18 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
 
     const updated = [...skills];
     if (!updated[catIndex].items) updated[catIndex].items = [];
+
+    // Collect existing lower-case skill items across all categories
+    const existingLower = new Set<string>();
+    skills.forEach((c: any) => {
+      (c.items || []).forEach((it: string) => existingLower.add(it.trim().toLowerCase()));
+    });
+
     tokens.forEach(t => {
-      if (!updated[catIndex].items.includes(t)) {
+      const lower = t.trim().toLowerCase();
+      if (!existingLower.has(lower)) {
         updated[catIndex].items.push(t);
+        existingLower.add(lower);
       }
     });
 
@@ -223,6 +243,14 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
   const removeSkillTag = (catIndex: number, tagIndex: number) => {
     const updated = [...skills];
     updated[catIndex].items.splice(tagIndex, 1);
+    onChange({
+      ...documentData,
+      skillsDetails: { ...documentData.skillsDetails, skills: updated }
+    });
+  };
+
+  const removeSkillCategory = (catIndex: number) => {
+    const updated = skills.filter((_: any, idx: number) => idx !== catIndex);
     onChange({
       ...documentData,
       skillsDetails: { ...documentData.skillsDetails, skills: updated }
@@ -348,6 +376,17 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
     });
   };
 
+  const removeProjectBullet = (projIndex: number, bulletIndex: number) => {
+    const updated = [...projects];
+    if (updated[projIndex]?.bullets) {
+      updated[projIndex].bullets.splice(bulletIndex, 1);
+      onChange({
+        ...documentData,
+        projectDetails: { ...documentData.projectDetails, projects: updated }
+      });
+    }
+  };
+
   const updateProjectBullet = (projIndex: number, bulletIndex: number, text: string) => {
     const updated = [...projects];
     updated[projIndex].bullets[bulletIndex] = text;
@@ -372,7 +411,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
   return (
     <GlassSurface glow="cyan" className="bg-slate-950/85 border-white/10 p-5 space-y-5 h-full overflow-y-auto shadow-2xl backdrop-blur-2xl">
       {/* SECTION SELECTOR BUTTONS & MANUAL SAVE BUTTON */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+      <div className="sticky -top-5 z-30 bg-slate-950/95 backdrop-blur-md flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pt-2 pb-3 -mx-5 px-5 shadow-md">
         <div className="flex flex-wrap gap-1.5">
           {activeTab === 'resume' ? (
             <>
@@ -459,9 +498,27 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                 type="email"
                 value={personal.contact?.email?.email || ''}
                 onChange={e => updateContact('email', { email: e.target.value, icon: '✉️' })}
-                placeholder={t('phEmail')}
+                placeholder="seuemail@exemplo.com"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
               />
+              {personal.contact?.email?.email?.includes('@') && !personal.contact.email.email.includes('.com') && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com'].map(domain => {
+                    const prefix = personal.contact.email.email.split('@')[0];
+                    const suggested = `${prefix}@${domain}`;
+                    return (
+                      <button
+                        key={domain}
+                        type="button"
+                        onClick={() => updateContact('email', { email: suggested, icon: '✉️' })}
+                        className="px-2 py-0.5 rounded-md bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-[10px] font-semibold hover:bg-cyan-900/60 transition cursor-pointer"
+                      >
+                        @{domain}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div>
@@ -486,7 +543,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                     icon: '📞'
                   });
                 }}
-                placeholder="(31) 99150-4604"
+                placeholder="(11) 99999-8888"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
               />
             </div>
@@ -510,64 +567,104 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                 type="text"
                 value={net.portfolio?.url || ''}
                 onChange={e => updateNetworking('portfolio', 'Portfólio', e.target.value, '🌐')}
-                placeholder={t('phPortfolio')}
+                placeholder="https://seusite.dev"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
               />
             </div>
 
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelLinkedin')}</label>
-              <input
-                type="text"
-                value={net.linkedin?.url || ''}
-                onChange={e => updateNetworking('linkedin', 'LinkedIn', e.target.value, '💼')}
-                placeholder={t('phLinkedin')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
-              />
+              <div className="flex rounded-xl bg-slate-900 border border-slate-800 focus-within:border-cyan-400 overflow-hidden">
+                <span className="px-2.5 py-2.5 bg-slate-950 text-slate-400 text-xs font-mono border-r border-slate-800 shrink-0">
+                  linkedin.com/in/
+                </span>
+                <input
+                  type="text"
+                  value={(net.linkedin?.url || '').replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '')}
+                  onChange={e => {
+                    const uname = e.target.value.trim().replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '');
+                    updateNetworking('linkedin', 'LinkedIn', uname ? `https://linkedin.com/in/${uname}` : '', '💼');
+                  }}
+                  placeholder="seu-usuario"
+                  className="w-full px-3 py-2.5 bg-transparent text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-sans"
+                />
+              </div>
             </div>
 
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelGithub')}</label>
-              <input
-                type="text"
-                value={net.github?.url || ''}
-                onChange={e => updateNetworking('github', 'GitHub', e.target.value, '🐙')}
-                placeholder={t('phGithub')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
-              />
+              <div className="flex rounded-xl bg-slate-900 border border-slate-800 focus-within:border-cyan-400 overflow-hidden">
+                <span className="px-2.5 py-2.5 bg-slate-950 text-slate-400 text-xs font-mono border-r border-slate-800 shrink-0">
+                  github.com/
+                </span>
+                <input
+                  type="text"
+                  value={(net.github?.url || '').replace(/^https?:\/\/(www\.)?github\.com\//i, '')}
+                  onChange={e => {
+                    const uname = e.target.value.trim().replace(/^https?:\/\/(www\.)?github\.com\//i, '');
+                    updateNetworking('github', 'GitHub', uname ? `https://github.com/${uname}` : '', '🐙');
+                  }}
+                  placeholder="seu-usuario"
+                  className="w-full px-3 py-2.5 bg-transparent text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-sans"
+                />
+              </div>
             </div>
 
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelTwitter')}</label>
-              <input
-                type="text"
-                value={net.twitter?.url || ''}
-                onChange={e => updateNetworking('twitter', 'X', e.target.value, '𝕏')}
-                placeholder={t('phTwitter')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
-              />
+              <div className="flex rounded-xl bg-slate-900 border border-slate-800 focus-within:border-cyan-400 overflow-hidden">
+                <span className="px-2.5 py-2.5 bg-slate-950 text-slate-400 text-xs font-mono border-r border-slate-800 shrink-0">
+                  x.com/
+                </span>
+                <input
+                  type="text"
+                  value={(net.twitter?.url || '').replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, '')}
+                  onChange={e => {
+                    const uname = e.target.value.trim().replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, '');
+                    updateNetworking('twitter', 'X', uname ? `https://x.com/${uname}` : '', '𝕏');
+                  }}
+                  placeholder="seu-usuario"
+                  className="w-full px-3 py-2.5 bg-transparent text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-sans"
+                />
+              </div>
             </div>
 
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelInstagram')}</label>
-              <input
-                type="text"
-                value={net.instagram?.url || ''}
-                onChange={e => updateNetworking('instagram', 'Instagram', e.target.value, '📷')}
-                placeholder={t('phInstagram')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
-              />
+              <div className="flex rounded-xl bg-slate-900 border border-slate-800 focus-within:border-cyan-400 overflow-hidden">
+                <span className="px-2.5 py-2.5 bg-slate-950 text-slate-400 text-xs font-mono border-r border-slate-800 shrink-0">
+                  instagram.com/
+                </span>
+                <input
+                  type="text"
+                  value={(net.instagram?.url || '').replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')}
+                  onChange={e => {
+                    const uname = e.target.value.trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '');
+                    updateNetworking('instagram', 'Instagram', uname ? `https://instagram.com/${uname}` : '', '📷');
+                  }}
+                  placeholder="seu-usuario"
+                  className="w-full px-3 py-2.5 bg-transparent text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-sans"
+                />
+              </div>
             </div>
 
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelFacebook')}</label>
-              <input
-                type="text"
-                value={net.facebook?.url || ''}
-                onChange={e => updateNetworking('facebook', 'Facebook', e.target.value, '📘')}
-                placeholder={t('phFacebook')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
-              />
+              <div className="flex rounded-xl bg-slate-900 border border-slate-800 focus-within:border-cyan-400 overflow-hidden">
+                <span className="px-2.5 py-2.5 bg-slate-950 text-slate-400 text-xs font-mono border-r border-slate-800 shrink-0">
+                  facebook.com/
+                </span>
+                <input
+                  type="text"
+                  value={(net.facebook?.url || '').replace(/^https?:\/\/(www\.)?facebook\.com\//i, '')}
+                  onChange={e => {
+                    const uname = e.target.value.trim().replace(/^https?:\/\/(www\.)?facebook\.com\//i, '');
+                    updateNetworking('facebook', 'Facebook', uname ? `https://facebook.com/${uname}` : '', '📘');
+                  }}
+                  placeholder="seu-usuario"
+                  className="w-full px-3 py-2.5 bg-transparent text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-sans"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -732,14 +829,23 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                   <div className="space-y-2 pl-2 border-t border-white/5 pt-2">
                     <label className="text-[11px] font-bold text-slate-400 uppercase">{t('bulletsLabel')}</label>
                     {exp.bullets?.map((bullet: string, bIdx: number) => (
-                      <input
-                        key={bIdx}
-                        type="text"
-                        value={bullet}
-                        onChange={e => updateExpBullet(idx, bIdx, e.target.value)}
-                        placeholder="Conquista mensurável com impacto ou métricas..."
-                        className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs md:text-sm text-slate-200 placeholder-slate-500"
-                      />
+                      <div key={bIdx} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={bullet}
+                          onChange={e => updateExpBullet(idx, bIdx, e.target.value)}
+                          placeholder="Conquista mensurável com impacto ou métricas..."
+                          className="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs md:text-sm text-slate-200 placeholder-slate-500 font-sans"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeExpBullet(idx, bIdx)}
+                          className="px-2.5 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-400 hover:text-red-200 text-xs font-bold transition cursor-pointer"
+                          title="Apagar este bullet"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     ))}
                     <button
                       type="button"
@@ -774,13 +880,23 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
           <div className="space-y-3.5">
             {skills.map((cat: any, cIdx: number) => (
               <div key={cIdx} className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-2.5 shadow-lg">
-                <input
-                  type="text"
-                  value={cat.name}
-                  onChange={e => updateSkillCategoryName(cIdx, e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs md:text-sm font-bold text-cyan-300 placeholder-slate-500"
-                  placeholder={t('phSkillCat')}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={cat.name}
+                    onChange={e => updateSkillCategoryName(cIdx, e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs md:text-sm font-bold text-cyan-300 placeholder-slate-500"
+                    placeholder={t('phSkillCat')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeSkillCategory(cIdx)}
+                    className="px-3 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-400 hover:text-red-200 text-xs font-bold transition cursor-pointer shrink-0"
+                    title="Remover esta categoria de habilidades"
+                  >
+                    ✕ Remover Categoria
+                  </button>
+                </div>
 
                 <div className="flex flex-wrap gap-2">
                   {cat.items?.map((item: string, iIdx: number) => (
@@ -1056,14 +1172,23 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                 <div className="space-y-2 pl-2">
                   <label className="text-[11px] font-bold text-slate-400 uppercase">Destaques do Projeto:</label>
                   {(proj.bullets || []).map((bullet: string, bIdx: number) => (
-                    <input
-                      key={bIdx}
-                      type="text"
-                      value={bullet}
-                      onChange={e => updateProjectBullet(idx, bIdx, e.target.value)}
-                      placeholder="Impacto ou resultado técnico alcançado no projeto..."
-                      className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs md:text-sm text-slate-200 placeholder-slate-500"
-                    />
+                    <div key={bIdx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={bullet}
+                        onChange={e => updateProjectBullet(idx, bIdx, e.target.value)}
+                        placeholder="Impacto ou resultado técnico alcançado no projeto..."
+                        className="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs md:text-sm text-slate-200 placeholder-slate-500 font-sans"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeProjectBullet(idx, bIdx)}
+                        className="px-2.5 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-400 hover:text-red-200 text-xs font-bold transition cursor-pointer"
+                        title="Apagar este bullet"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   ))}
                   <button
                     type="button"

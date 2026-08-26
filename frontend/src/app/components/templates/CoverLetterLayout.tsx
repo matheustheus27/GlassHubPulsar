@@ -40,7 +40,7 @@ export const CoverLetterLayout: React.FC<CoverLetterLayoutProps> = ({
         style={{
           name: { color: titlePrimary.fontColor, fontFamily: titlePrimary.fontType },
           title: { color: subtitlePrimary.fontColor, fontFamily: subtitlePrimary.fontType },
-          contact: { color: metaStyle.fontColor, fontFamily: metaStyle.fontType }
+          contact: { color: metaStyle.fontColor, iconColor: titlePrimary.fontColor || '#06b6d4', fontFamily: metaStyle.fontType }
         }}
       />
 

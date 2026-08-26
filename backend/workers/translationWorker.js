@@ -32,6 +32,12 @@ class TranslationWorker {
 
   init() {
     queueManager.registerWorker('translation', this.processJob.bind(this));
+
+    // RabbitMQ via MessageBroker (primary, with InMemory fallback)
+    const messageBroker = require('../messaging/MessageBroker');
+    messageBroker.consume('translation', this.processJob.bind(this)).catch(err =>
+      logger.warn('[TranslationWorker] MessageBroker consume note:', err.message)
+    );
   }
 
   /**
@@ -151,10 +157,22 @@ class TranslationWorker {
 
       // 6. Persist translated version to database
       if (userId) {
-        await prisma.resumeData.create({
-          data: {
+        await prisma.resumeData.upsert({
+          where: {
+            userId_language: { userId, language: targetLang }
+          },
+          create: {
             userId,
             language: targetLang,
+            title: `Resume (${targetLang})`,
+            personalDetails: translatedDoc.personal || {},
+            summary: translatedDoc.summary || {},
+            skills: translatedDoc.skills || {},
+            experiences: translatedDoc.experiences || {},
+            education: translatedDoc.education || {},
+            projects: translatedDoc.projects || {}
+          },
+          update: {
             title: `Resume (${targetLang})`,
             personalDetails: translatedDoc.personal || {},
             summary: translatedDoc.summary || {},

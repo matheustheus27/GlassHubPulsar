@@ -34,7 +34,7 @@ export function Toast({ message, type, duration = 5000, onClose }: ToastProps) {
   return (
     <div 
       className={`
-        fixed bottom-6 right-6 
+        fixed bottom-24 right-6 z-50
         max-w-sm 
         px-6 py-4 
         rounded-xl 

@@ -132,7 +132,7 @@ class QueueManager {
   }
 
   initQueues() {
-    const queueNames = ['translation', 'notification', 'pdf', 'analytics'];
+    const queueNames = ['translation', 'notification', 'pdf', 'analytics', 'ocr', 'cdc'];
 
     for (const name of queueNames) {
       if (Queue && process.env.USE_REDIS === 'true') {

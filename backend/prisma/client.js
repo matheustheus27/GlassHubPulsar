@@ -242,6 +242,50 @@ const memoryFallbackHandlers = {
       if (idx !== -1) return memoryStore.accountDeletionQueue.splice(idx, 1)[0];
       return null;
     }
+  },
+  systemExecutionLog: {
+    create: async ({ data }) => {
+      const log = { id: `log_${Date.now()}`, timestamp: new Date(), ...data };
+      memoryStore.logs = memoryStore.logs || [];
+      memoryStore.logs.push(log);
+      if (memoryStore.logs.length > 500) memoryStore.logs.shift();
+      return log;
+    },
+    findMany: async ({ take = 15 } = {}) => (memoryStore.logs || []).slice(-take),
+    count: async () => (memoryStore.logs || []).length
+  },
+  systemMetric: {
+    create: async ({ data }) => {
+      const metric = { id: `metric_${Date.now()}`, recordedAt: new Date(), ...data };
+      memoryStore.metrics = memoryStore.metrics || [];
+      memoryStore.metrics.push(metric);
+      if (memoryStore.metrics.length > 500) memoryStore.metrics.shift();
+      return metric;
+    },
+    findMany: async () => memoryStore.metrics || []
+  },
+  coverLetterData: {
+    findFirst: async ({ where = {} }) => (memoryStore.coverLetters || []).find(c => (!where.userId || c.userId === where.userId) && (!where.language || c.language === where.language)),
+    findMany: async ({ where = {} }) => (memoryStore.coverLetters || []).filter(c => !where.userId || c.userId === where.userId),
+    create: async ({ data }) => {
+      const cl = { id: `cl_${Date.now()}`, createdAt: new Date(), updatedAt: new Date(), ...data };
+      memoryStore.coverLetters = memoryStore.coverLetters || [];
+      memoryStore.coverLetters.push(cl);
+      return cl;
+    },
+    upsert: async ({ where = {}, create = {}, update = {} }) => {
+      memoryStore.coverLetters = memoryStore.coverLetters || [];
+      const uId = where.userId || where.userId_language?.userId;
+      const lang = where.language || where.userId_language?.language;
+      const idx = memoryStore.coverLetters.findIndex(c => c.userId === uId && c.language === lang);
+      if (idx !== -1) {
+        memoryStore.coverLetters[idx] = { ...memoryStore.coverLetters[idx], ...update, updatedAt: new Date() };
+        return memoryStore.coverLetters[idx];
+      }
+      const created = { id: `cl_${Date.now()}`, ...create, createdAt: new Date(), updatedAt: new Date() };
+      memoryStore.coverLetters.push(created);
+      return created;
+    }
   }
 };
 
@@ -281,11 +325,51 @@ function createResilientModelProxy(modelName) {
               return await fallback[prop](...args);
             }
             throw dbErr;
+          } finally {
+            // Dispatch CDC (Change Data Capture) event on mutations
+            if (['create', 'update', 'upsert', 'delete', 'updateMany', 'deleteMany'].includes(String(prop))) {
+              try {
+                const queueManager = require('../queues/queueManager');
+                const cdcQueue = queueManager.getQueue('cdc');
+                if (cdcQueue) {
+                  const argObj = args[0] || {};
+                  const userId = argObj.where?.userId || argObj.data?.userId || argObj.create?.userId || argObj.where?.id;
+                  cdcQueue.add('cdc_event', {
+                    model: modelName,
+                    action: String(prop),
+                    userId,
+                    id: argObj.where?.id,
+                    data: argObj.data || argObj.create || argObj.update,
+                    timestamp: Date.now()
+                  }).catch(() => {});
+                }
+              } catch (cdcErr) {}
+            }
           }
         }
 
         if (typeof fallback[prop] === 'function') {
-          return await fallback[prop](...args);
+          const res = await fallback[prop](...args);
+          // Dispatch CDC event on fallback mutations as well
+          if (['create', 'update', 'upsert', 'delete', 'updateMany', 'deleteMany'].includes(String(prop))) {
+            try {
+              const queueManager = require('../queues/queueManager');
+              const cdcQueue = queueManager.getQueue('cdc');
+              if (cdcQueue) {
+                const argObj = args[0] || {};
+                const userId = argObj.where?.userId || argObj.data?.userId || argObj.create?.userId || argObj.where?.id;
+                cdcQueue.add('cdc_event', {
+                  model: modelName,
+                  action: String(prop),
+                  userId,
+                  id: argObj.where?.id,
+                  data: argObj.data || argObj.create || argObj.update,
+                  timestamp: Date.now()
+                }).catch(() => {});
+              }
+            } catch (cdcErr) {}
+          }
+          return res;
         }
         return null;
       };

@@ -10,7 +10,7 @@
 
   <p>
     <a href="LICENSE">
-      <img src="https://glasshub-quasar.vercel.app/api/badge?label=License&value=MIT&icon=sparkles&theme=glass-dark&glow=true" alt="License MIT" />
+      <img src="https://glasshub-quasar.vercel.app/api/badge?label=License&value=Proprietary&icon=license&theme=glass-dark&glow=true" alt="License Proprietary" />
     </a>
     <a href="https://nodejs.org">
       <img src="https://glasshub-quasar.vercel.app/api/badge?label=Node.js&value=v20.x&icon=nodejs&theme=glass-dark&glow=true" alt="Node.js" />

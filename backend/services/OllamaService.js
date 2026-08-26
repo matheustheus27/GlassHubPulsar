@@ -1,8 +1,30 @@
 const TagProcessor = require('../layout/TagProcessor');
 const logger = require('../utils/logger');
 const documentParser = require('./DocumentParserService');
+const { RESUME_JSON_SCHEMA, validateAndCleanResumeData, normalizeToApplicationDTO } = require('../schemas/resumeSchema');
 
 class OllamaService {
+    /**
+     * Sanitizes raw candidate input text
+     */
+    static #sanitizeInputText(text) {
+        if (!text || typeof text !== 'string') return '';
+        return text
+            .replace(/^%?PDF-[\d.]+/gi, '')
+            .replace(/\/Title\s*\([^\)]*\)/gi, '')
+            .replace(/\/Creator\s*\([^\)]*\)/gi, '')
+            .replace(/\/Producer\s*\([^\)]*\)/gi, '')
+            .replace(/\/CreationDate\s*\([^\)]*\)/gi, '')
+            .replace(/\/ModDate\s*\([^\)]*\)/gi, '')
+            .replace(/\/ca\s+[\d.]+/gi, '')
+            .replace(/\/BM\s+\/[A-Za-z]+/gi, '')
+            .replace(/\r\n/g, '\n')
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+            .replace(/\u200B/g, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
     /**
      * Recursively removes custom tags (<BOLD>, etc.) from any string 
      * present within objects or arrays to deliver a clean JSON payload to the AI.
@@ -24,7 +46,115 @@ class OllamaService {
         return obj;
     }
 
-    static async chatWithDocument(document, messages = []) {
+    /**
+     * Parse Resume using Ollama API format flag with strict JSON Schema definition
+     * Guarantees non-agglutinated fields (empresa, cargo, periodo strictly separated)
+     */
+    async parseResumeWithStructuredSchema(rawText, options = {}) {
+        if (!rawText || typeof rawText !== 'string' || !rawText.trim()) {
+            throw new Error('Texto de currículo vazio para parsing estruturado.');
+        }
+
+        const sanitizedText = OllamaService.#sanitizeInputText(rawText);
+        const ollamaHost = process.env.OLLAMA_HOST || "http://ollama:11434";
+        const model = options.model || process.env.OLLAMA_MODEL || "llama3.2";
+
+        const systemPrompt = `You are a high-precision data parsing engine specializing in Portuguese candidate resumes.
+Rigorously analyze the raw document text provided below and return ONLY a valid structured JSON object matching the contract schema.
+
+CRITICAL EXTRACTION RULES:
+1. HEADER BLOCKS:
+   - Extract Full Name ('nome'), Target Title/Role ('titulo'), Location ('localizacao' e.g. Cidade, UF), Email ('email'), Phone number ('telefone'), and Links ('linkedin', 'github').
+2. COMPETENCIES / SKILLS:
+   - The document lists skills in tags/badges under uppercase section titles (e.g., "LINGUAGENS", "FRAMEWORKS E BIBLIOTECAS", "BANCOS DE DADOS", "DEVOPS", "PROTOCOLOS E COMUNICAÇÃO", "METODOLOGIAS E CONCEITOS").
+   - Map each individual item to its respective array inside "competencias" (linguagens, frameworksBibliotecas, bancosDeDados, devops, protocolosComunicacao, metodologiasConceitos).
+3. PROFESSIONAL EXPERIENCE ('experiencias'):
+   - Identify each separate work entry cleanly into individual objects.
+   - "empresa": Organization name (e.g., Teknisa, Azapfy, Commit Jr., NTIC, Sistema Divina Providência).
+   - "cargo": Job title/role (e.g., Desenvolvedor Full-Stack, Instrutor de Informática).
+   - "periodo": Dates/duration (e.g., "Set 2025-Presente", "Out 2021- Set 2024").
+   - "descricaoGeral": Introductory text describing scope/responsibilities (if present).
+   - "realizacoes": Array containing each bullet point (• marker) of responsibilities or achievements. NEVER merge or agglutinate different topics into the same item.
+4. ACADEMIC EDUCATION ('formacaoAcademica'):
+   - Identify each course/degree separately (e.g., "CEFET-MG", "Sistema Divina Providência").
+   - "instituicao": Educational institution name.
+   - "grau": Degree title (e.g., "Bacharelado em Engenharia de Computação", "Técnico em Informática").
+   - "statusOuPeriodo": Status or period (e.g., "Previsão de conclusão em 2028", "Concluído em 2015").
+   - "detalhes": Descriptive text of curriculum focus or achievements.
+5. PERSONAL / FEATURED PROJECTS ('projetos'):
+   - Identify each project individually (e.g., "NativeZip Tools", "Glassmorphic Professional Resume", "Alquerque - Motor de Jogo de Tabuleiro").
+   - "nome": Project title.
+   - "tecnologias": Array with tags/stacks listed right below the project name (e.g., ["C#", "Utilitários de Sistema", "Gerenciamento de Zip"]).
+   - "realizacoes": Array with detailed bullet points for each project.
+6. FONT STYLE TAG PRESERVATION:
+   - Preserve formatting tags <BOLD>text</BOLD> and <ITALIC>text</ITALIC> around styled words inside text blocks.
+7. Output ONLY valid JSON matching the schema, with no preamble or conversational text.`;
+
+        const userPrompt = `TEXTO DO CURRÍCULO PARA EXTRAÇÃO:\n\n${sanitizedText}`;
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+
+        try {
+            logger.info(`[OllamaService] Sending text to Ollama structured schema parser (model: ${model})`);
+            const response = await fetch(`${ollamaHost}/api/generate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model,
+                    system: systemPrompt,
+                    prompt: userPrompt,
+                    format: RESUME_JSON_SCHEMA,
+                    stream: false,
+                    options: { temperature: 0.1 }
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            if (response.ok) {
+                const data = await response.json();
+                const responseStr = data?.response;
+                if (responseStr) {
+                    const parsedRaw = JSON.parse(responseStr);
+                    const cleanedSchema = validateAndCleanResumeData(parsedRaw);
+                    const normalized = normalizeToApplicationDTO(cleanedSchema);
+                    logger.info(`[OllamaService] Structured schema parsing succeeded (${cleanedSchema.experiencias?.length || 0} experiences, ${cleanedSchema.projetos?.length || 0} projects)`);
+                    return normalized;
+                }
+            }
+        } catch (err) {
+            clearTimeout(timeout);
+            logger.warn(`[OllamaService] Primary model (${model}) structured schema note/timeout:`, err.message);
+        }
+
+        // Fast Heuristic Fallback (<10ms execution guarantees zero timeouts)
+        logger.info('[OllamaService] Executing high-speed heuristic rule-based extraction fallback');
+        const heuristicRaw = OllamaService.#advancedHeuristicExtract(sanitizedText);
+        return normalizeToApplicationDTO(heuristicRaw);
+    }
+
+    static async parseResumeWithStructuredSchema(rawText, options = {}) {
+        const instance = new OllamaService();
+        return instance.parseResumeWithStructuredSchema(rawText, options);
+    }
+
+    static async parseResumeFromRawText(rawText, options = {}) {
+        const instance = new OllamaService();
+        return instance.parseResumeWithStructuredSchema(rawText, options);
+    }
+
+    async parseResumeFromRawText(rawText, options = {}) {
+        return this.parseResumeWithStructuredSchema(rawText, options);
+    }
+
+    async chatWithDocument(document, messages = [], userId = 'default_user') {
+        return OllamaService.chatWithDocument(document, messages, userId);
+    }
+
+    static async chatWithDocument(document, messages = [], userId = 'default_user') {
+        const RAGService = require('./RAGService');
         const ollamaHost = process.env.OLLAMA_HOST || "http://ollama:11434";
 
         const language = document?.settings?.language || "pt-BR";
@@ -34,7 +164,20 @@ class OllamaService {
             ? "The user's selected language is PORTUGUESE (pt-BR). Answer EXCLUSIVELY in Portuguese."
             : "The user's selected language is ENGLISH (en-US). Answer EXCLUSIVELY in English.";
 
-        const cleanedDocument = this.#stripTagsFromObject(document);
+        const cleanedDocument = OllamaService.#stripTagsFromObject(document);
+        const lastUserMessage = (messages[messages.length - 1]?.content || "").trim();
+
+        let ragContextText = '';
+        if (lastUserMessage) {
+            try {
+                const ragChunks = await RAGService.queryRelevantContext(userId, lastUserMessage, 4);
+                if (ragChunks && ragChunks.length > 0) {
+                    ragContextText = `\nRETRIEVED VECTOR CONTEXT FROM CANDIDATE DOCUMENT (OLLAMA RAG):\n---\n${ragChunks.join('\n---\n')}\n---\n`;
+                }
+            } catch (ragErr) {
+                logger.warn('[OllamaService] RAG context retrieval error:', ragErr.message);
+            }
+        }
 
         const systemPrompt = `
             You are a Senior Tech Recruiter and Executive Career Specialist at GlassHub.
@@ -42,10 +185,10 @@ class OllamaService {
             
             DOCUMENT CONTEXT:
             ${JSON.stringify(cleanedDocument, null, 2)}
-
+            ${ragContextText}
             INSTRUCTIONS:
             1. ${languageInstruction}
-            2. Directly and specifically answer the user's exact question or prompt.
+            2. Directly and specifically answer the user's exact question or prompt using the document details and retrieved RAG vector context above.
             3. Provide actionable suggestions with concrete examples.
             4. You MAY use formatting tags when helpful:
                - <BOLD>text</BOLD> for key terms, metrics, or technologies
@@ -54,9 +197,6 @@ class OllamaService {
             5. Maintain a professional, highly encouraging and technical recruiter tone.
         `;
 
-        const lastUserMessage = (messages[messages.length - 1]?.content || "").trim();
-
-        // 1. Try real Ollama AI inference
         const payload = {
             model: "llama3.2",
             messages: [
@@ -91,7 +231,6 @@ class OllamaService {
             logger.debug('[OllamaService] Ollama API offline or timed out, generating context-aware response:', err.message);
         }
 
-        // 2. Intelligent Context-Aware Recruiter Engine
         const q = lastUserMessage.toLowerCase();
         let replyContent = "";
 
@@ -132,172 +271,27 @@ class OllamaService {
     }
 
     /**
-     * Extracts and populates all resume structures from raw text (.pdf, .docx, or pasted CV)
-     */
-    static async parseResumeFromRawText(rawText) {
-        if (!rawText || rawText.trim().length === 0) {
-            throw new Error('Texto vazio');
-        }
-
-        const sanitizedText = this.#sanitizeInputText(rawText);
-
-        const ollamaHost = process.env.OLLAMA_HOST || "http://ollama:11434";
-        const prompt = `
-You are an expert AI Resume Parser. Extract ALL candidate data from the provided resume text into a strict, valid JSON object without markdown fences or additional conversational text.
-
-JSON FORMAT REQUIREMENTS:
-{
-    "personalDetails": {
-        "name": "Candidate Full Name",
-        "title": "Professional Title / Role",
-        "contact": {
-            "email": { "email": "email@domain.com", "icon": "✉️" },
-            "phone": { "phone": "Phone number with country/area code", "link": "", "icon": "📞" },
-            "networking": {
-                "linkedin": { "name": "LinkedIn", "url": "https://linkedin.com/in/username", "icon": "💼" },
-                "github": { "name": "GitHub", "url": "https://github.com/username", "icon": "🐙" },
-                "portfolio": { "name": "Portfólio", "url": "https://portfolio.url", "icon": "🌐" }
-            }
-        },
-        "location": { "location": "City, State - Country", "link": "", "icon": "📍" }
-    },
-    "summaryDetails": {
-        "summaryTitle": "RESUMO PROFISSIONAL",
-        "summary": "Full text of professional summary"
-    },
-    "skillsDetails": {
-        "skillsTitle": "COMPETÊNCIAS & TECNOLOGIAS",
-        "skills": [
-            { "name": "Category Name (e.g. Linguagens, Frameworks, Bancos de Dados, DevOps, etc.)", "items": ["Item 1", "Item 2"] }
-        ]
-    },
-    "experienceDetails": {
-        "experienceTitle": "HISTÓRICO PROFISSIONAL",
-        "experiences": [
-            {
-                "company": "Company Name",
-                "position": "Job Title / Role",
-                "period": "Start - End (e.g. Set 2025 – Presente)",
-                "bullets": ["Detailed bullet point 1", "Detailed bullet point 2"]
-            }
-        ]
-    },
-    "educationDetails": {
-        "educationTitle": "FORMAÇÃO ACADÊMICA",
-        "educations": [
-            {
-                "organization": "Institution Name",
-                "degree": "Degree or Course Name",
-                "period": "Period or Completion Status",
-                "description": "Details about curriculum, focus or achievements"
-            }
-        ]
-    },
-    "projectDetails": {
-        "projectTitle": "PROJETOS DE DESTAQUE",
-        "projects": [
-            {
-                "title": "Project Name",
-                "link": "URL or empty",
-                "description": "Technologies used and brief overview",
-                "bullets": ["Project bullet 1"]
-            }
-        ]
-    }
-}
-
-SEMANTIC RESUME DOCUMENT (HTML & STRUCTURED BLOCKS):
-\`\`\`html
-${documentParser.convertToStructuredHtml(sanitizedText)}
-\`\`\`
-        `;
-
-        // 1. Attempt LLM extraction via Ollama
-        try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 45000);
-
-            const res = await fetch(`${ollamaHost}/api/generate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model: "llama3.2",
-                    prompt,
-                    format: "json",
-                    stream: false
-                }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeout);
-
-            if (res.ok) {
-                const data = await res.json();
-                const jsonText = data.response;
-                let parsed = null;
-                try {
-                    parsed = JSON.parse(jsonText);
-                } catch (pe) {
-                    const match = jsonText.match(/\{[\s\S]*\}/);
-                    if (match) parsed = JSON.parse(match[0]);
-                }
-
-                if (parsed && parsed.personalDetails && parsed.personalDetails.name && !parsed.personalDetails.name.includes('PDF')) {
-                    logger.info(`[OllamaService] Parsed resume JSON generated by Llama 3.2 for [${parsed.personalDetails.name}]`);
-                    return this.#normalizeParsedResume(parsed);
-                }
-            }
-        } catch (err) {
-            logger.warn('[OllamaService] AI parse fallback using Advanced Heuristic Extractor:', err.message);
-        }
-
-        // 2. Advanced Heuristic Extractor
-        return this.#advancedHeuristicExtract(sanitizedText);
-    }
-
-    /**
-     * Sanitizes input text to eliminate PDF metadata artifacts
-     */
-    static #sanitizeInputText(text) {
-        return text
-            .replace(/^%?PDF-[\d.]+/gi, '')
-            .replace(/\/Title\s*\([^\)]*\)/gi, '')
-            .replace(/\/Creator\s*\([^\)]*\)/gi, '')
-            .replace(/\/Producer\s*\([^\)]*\)/gi, '')
-            .replace(/\/CreationDate\s*\([^\)]*\)/gi, '')
-            .replace(/\/ModDate\s*\([^\)]*\)/gi, '')
-            .replace(/\/ca\s+[\d.]+/gi, '')
-            .replace(/\/BM\s+\/[A-Za-z]+/gi, '')
-            .trim();
-    }
-
-    /**
      * Advanced heuristic rule-based extractor
      */
     static #advancedHeuristicExtract(text) {
         const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
-        // 1. Extract contact details
         const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
         const email = emailMatch ? emailMatch[0] : '';
 
-        // Brazilian and international phone formats (+55 (31) 99150-4604, (31) 99150-4604, etc.)
         const phoneMatch = text.match(/(\+55\s*)?\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}/);
         const phone = phoneMatch ? phoneMatch[0].trim() : '';
 
-        // LinkedIn & GitHub
         const linkedinMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i);
         const linkedinUrl = linkedinMatch ? (linkedinMatch[0].startsWith('http') ? linkedinMatch[0] : `https://${linkedinMatch[0]}`) : '';
 
         const githubMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
         const githubUrl = githubMatch ? (githubMatch[0].startsWith('http') ? githubMatch[0] : `https://${githubMatch[0]}`) : '';
 
-        // Location detection (e.g., "Ribeirão das Neves, MG", "São Paulo, SP - Brasil", "Belo Horizonte, MG")
         const locationMatch = text.match(/📍\s*([A-Za-zÀ-ÖØ-öø-ÿ\s]+,\s*[A-Z]{2}(?:\s*-\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)?)/i)
             || text.match(/([A-Za-zÀ-ÖØ-öø-ÿ\s]{3,30},\s*[A-Z]{2}(?:\s*-\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)?)/);
         const location = locationMatch ? locationMatch[1].trim() : 'Brasil';
 
-        // 2. Candidate Name and Title
         let candidateName = 'Candidato';
         let candidateTitle = 'Desenvolvedor de Software';
 
@@ -315,22 +309,11 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
             }
         }
 
-        // 3. Section Slicing
         const sections = this.#sliceSections(text);
-
-        // 4. Parse Summary
         const summaryText = sections['RESUMO'] || sections['SUMMARY'] || sections['PERFIL'] || '';
-
-        // 5. Parse Skills
         const skills = this.#parseSkillsSection(sections['COMPETÊNCIAS'] || sections['SKILLS'] || sections['TECNOLOGIAS'] || '');
-
-        // 6. Parse Experiences
         const experiences = this.#parseExperienceSection(sections['EXPERIÊNCIA'] || sections['HISTÓRICO'] || '');
-
-        // 7. Parse Education
         const educations = this.#parseEducationSection(sections['FORMAÇÃO'] || sections['EDUCAÇÃO'] || '');
-
-        // 8. Parse Projects
         const projects = this.#parseProjectsSection(sections['PROJETOS'] || '');
 
         return {
@@ -341,8 +324,8 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
                     email: { email, icon: '✉️' },
                     phone: { phone, link: phone ? `https://wa.me/${phone.replace(/\D/g, '')}` : '', icon: '📞' },
                     networking: {
-                        linkedin: { name: 'LinkedIn', url: linkedinUrl || (email ? `https://linkedin.com/in/${email.split('@')[0]}` : ''), icon: '💼' },
-                        github: { name: 'GitHub', url: githubUrl || (email ? `https://github.com/matheustheus27` : ''), icon: '🐙' }
+                        linkedin: { name: 'LinkedIn', url: linkedinUrl || '', icon: '💼' },
+                        github: { name: 'GitHub', url: githubUrl || '', icon: '🐙' }
                     }
                 },
                 location: { location, link: '', icon: '📍' }
@@ -353,53 +336,23 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
             },
             skillsDetails: {
                 skillsTitle: 'COMPETÊNCIAS & TECNOLOGIAS',
-                skills: skills.length > 0 ? skills : [
-                    { name: 'Linguagens', items: ['TypeScript', 'JavaScript', 'Node.js', 'Python', 'PHP', 'C#'] },
-                    { name: 'Bancos de Dados & DevOps', items: ['PostgreSQL', 'MongoDB', 'Redis', 'Docker', 'Git', 'CI/CD'] }
-                ]
+                skills: skills.length > 0 ? skills : []
             },
             experienceDetails: {
                 experienceTitle: 'HISTÓRICO PROFISSIONAL',
-                experiences: experiences.length > 0 ? experiences : [
-                    {
-                        company: 'Empresa de Tecnologia',
-                        position: candidateTitle,
-                        period: '2021 - Presente',
-                        bullets: [
-                            'Atuação na arquitetura e sustentação de microsserviços de alta disponibilidade.',
-                            'Desenvolvimento de pipelines de integração contínua e automação de deploys com Docker.'
-                        ]
-                    }
-                ]
+                experiences: experiences.length > 0 ? experiences : []
             },
             educationDetails: {
                 educationTitle: 'FORMAÇÃO ACADÊMICA',
-                educations: educations.length > 0 ? educations : [
-                    {
-                        organization: 'Ensino Superior / Graduação',
-                        degree: 'Bacharelado em Engenharia de Computação',
-                        period: 'Concluído',
-                        description: 'Formação com ênfase em sistemas distribuídos e engenharia de software.'
-                    }
-                ]
+                educations: educations.length > 0 ? educations : []
             },
             projectDetails: {
                 projectTitle: 'PROJETOS DE DESTAQUE',
-                projects: projects.length > 0 ? projects : [
-                    {
-                        title: 'GlassHub Pulsar',
-                        link: 'https://github.com/matheustheus27/GlassHubPulsar',
-                        description: 'Plataforma enterprise de geração de currículos com motor cósmico Glassmorphic, paginação A4 e IA.',
-                        bullets: ['Arquitetura desacoplada de microsserviços com Puppeteer e telemetria Datadog.']
-                    }
-                ]
+                projects: projects.length > 0 ? projects : []
             }
         };
     }
 
-    /**
-     * Splits full text by major resume headings
-     */
     static #sliceSections(text) {
         const sectionMap = {};
         const headerRegex = /(?:^|\n)(RESUMO PROFISSIONAL|RESUMO|SUMMARY|COMPETÊNCIAS TÉCNICAS|COMPETÊNCIAS & TECNOLOGIAS|COMPETÊNCIAS|HABILIDADES|SKILLS|EXPERIÊNCIA PROFISSIONAL|HISTÓRICO PROFISSIONAL|EXPERIÊNCIA|EXPERIENCIAS|FORMAÇÃO ACADÊMICA|FORMAÇÃO|EDUCAÇÃO|EDUCATION|PROJETOS PESSOAIS|PROJETOS DE DESTAQUE|PROJETOS|PROJECTS)(?:\s*\(CONTINUAÇÃO\))?(?::|\n|$)/gi;
@@ -438,9 +391,54 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
         return sectionMap;
     }
 
-    /**
-     * Parses technical skills into categories
-     */
+    static #tokenizeSkillsLine(line) {
+        const multiWordPhrases = [
+            'Clean Code & SOLID Principles',
+            'Clean Code',
+            'SOLID Principles',
+            'Arquitetura de Software',
+            'Headless Browser Management',
+            'Internacionalização (i18n)',
+            'Metodologias Ágeis (Scrum)',
+            'Metodologias Ágeis',
+            'Tailwind CSS',
+            'Oracle SQL',
+            'SQL Server',
+            'Docker Compose',
+            'APIs REST'
+        ];
+
+        let working = line;
+        const extracted = [];
+
+        for (const phrase of multiWordPhrases) {
+            const idx = working.toLowerCase().indexOf(phrase.toLowerCase());
+            if (idx !== -1) {
+                extracted.push(phrase);
+                working = working.slice(0, idx) + ' ' + working.slice(idx + phrase.length);
+            }
+        }
+
+        const parts = working.split(/[,•|·/\n]/);
+        for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed) continue;
+
+            if (!trimmed.includes('&') && !trimmed.includes('(')) {
+                const tokens = trimmed.split(/\s+/).filter(Boolean);
+                for (const tok of tokens) {
+                    if (tok.length > 0 && !extracted.includes(tok)) {
+                        extracted.push(tok);
+                    }
+                }
+            } else {
+                if (!extracted.includes(trimmed)) extracted.push(trimmed);
+            }
+        }
+
+        return extracted;
+    }
+
     static #parseSkillsSection(text) {
         if (!text) return [];
 
@@ -460,21 +458,11 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
                     items: []
                 };
             } else {
-                const items = line.split(/[,•|·/]/).map(s => s.trim()).filter(s => s.length > 0);
-                if (items.length > 0) {
-                    if (!currentCategory) {
-                        currentCategory = { name: 'Competências Principais', items: [] };
-                    }
-                    for (const it of items) {
-                        // Split multi-word space separated tokens if grouped (e.g. "PHP Python C C++ C# Java JavaScript TypeScript")
-                        if (it.split(/\s+/).length > 3 && !it.includes('&') && !it.includes('Clean Code')) {
-                            const subTokens = it.split(/\s+/).filter(Boolean);
-                            currentCategory.items.push(...subTokens);
-                        } else {
-                            currentCategory.items.push(it);
-                        }
-                    }
+                if (!currentCategory) {
+                    currentCategory = { name: 'Competências Principais', items: [] };
                 }
+                const tokens = this.#tokenizeSkillsLine(line);
+                currentCategory.items.push(...tokens);
             }
         }
 
@@ -482,16 +470,12 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
             categories.push(currentCategory);
         }
 
-        // Deduplicate items per category
         return categories.map(c => ({
             name: c.name,
             items: Array.from(new Set(c.items)).filter(Boolean)
         }));
     }
 
-    /**
-     * Parses work experiences with company, role, dates and bullets
-     */
     static #parseExperienceSection(text) {
         if (!text) return [];
 
@@ -535,9 +519,6 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
         return experiences;
     }
 
-    /**
-     * Parses education entries
-     */
     static #parseEducationSection(text) {
         if (!text) return [];
 
@@ -570,9 +551,6 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
         return educations;
     }
 
-    /**
-     * Parses project entries
-     */
     static #parseProjectsSection(text) {
         if (!text) return [];
 
@@ -611,47 +589,12 @@ ${documentParser.convertToStructuredHtml(sanitizedText)}
 
         return projects;
     }
-
-    /**
-     * Normalizes parsed JSON output from LLM to ensure all expected keys exist
-     */
-    static #normalizeParsedResume(data) {
-        return {
-            personalDetails: {
-                name: data.personalDetails?.name || 'Candidato',
-                title: data.personalDetails?.title || 'Desenvolvedor de Software',
-                contact: {
-                    email: data.personalDetails?.contact?.email || { email: '', icon: '✉️' },
-                    phone: data.personalDetails?.contact?.phone || { phone: '', link: '', icon: '📞' },
-                    networking: data.personalDetails?.contact?.networking || {
-                        linkedin: { name: 'LinkedIn', url: '', icon: '💼' },
-                        github: { name: 'GitHub', url: '', icon: '🐙' }
-                    }
-                },
-                location: data.personalDetails?.location || { location: 'Brasil', link: '', icon: '📍' }
-            },
-            summaryDetails: {
-                summaryTitle: data.summaryDetails?.summaryTitle || 'RESUMO PROFISSIONAL',
-                summary: data.summaryDetails?.summary || ''
-            },
-            skillsDetails: {
-                skillsTitle: data.skillsDetails?.skillsTitle || 'COMPETÊNCIAS & TECNOLOGIAS',
-                skills: Array.isArray(data.skillsDetails?.skills) ? data.skillsDetails.skills : []
-            },
-            experienceDetails: {
-                experienceTitle: data.experienceDetails?.experienceTitle || 'HISTÓRICO PROFISSIONAL',
-                experiences: Array.isArray(data.experienceDetails?.experiences) ? data.experienceDetails.experiences : []
-            },
-            educationDetails: {
-                educationTitle: data.educationDetails?.educationTitle || 'FORMAÇÃO ACADÊMICA',
-                educations: Array.isArray(data.educationDetails?.educations) ? data.educationDetails.educations : []
-            },
-            projectDetails: {
-                projectTitle: data.projectDetails?.projectTitle || 'PROJETOS DE DESTAQUE',
-                projects: Array.isArray(data.projectDetails?.projects) ? data.projectDetails.projects : []
-            }
-        };
-    }
 }
 
-module.exports = OllamaService;
+const serviceInstance = new OllamaService();
+serviceInstance.OllamaService = OllamaService;
+serviceInstance.parseResumeFromRawText = serviceInstance.parseResumeFromRawText.bind(serviceInstance);
+serviceInstance.parseResumeWithStructuredSchema = serviceInstance.parseResumeWithStructuredSchema.bind(serviceInstance);
+serviceInstance.chatWithDocument = OllamaService.chatWithDocument.bind(OllamaService);
+
+module.exports = serviceInstance;

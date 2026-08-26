@@ -35,16 +35,21 @@ export function useSSE() {
   });
 
   const [notifications, setNotifications] = useState<SystemNotification[]>(() => {
-    return [
-      {
-        id: 'notif-welcome',
-        title: 'Cluster GlassHub Conectado',
-        message: 'Motor de renderização A4, IA e telemetria inicializados com sucesso.',
-        timestamp: new Date().toLocaleTimeString(),
-        variant: 'emerald',
-        isRead: false
-      }
-    ];
+    const hasShown = typeof window !== 'undefined' && sessionStorage.getItem('glasshub_cluster_connected_shown');
+    if (!hasShown) {
+      if (typeof window !== 'undefined') sessionStorage.setItem('glasshub_cluster_connected_shown', 'true');
+      return [
+        {
+          id: 'notif-welcome',
+          title: 'Cluster GlassHub Conectado',
+          message: 'Motor de renderização A4, IA e telemetria inicializados com sucesso.',
+          timestamp: new Date().toLocaleTimeString(),
+          variant: 'emerald',
+          isRead: false
+        }
+      ];
+    }
+    return [];
   });
 
   useEffect(() => {
@@ -63,7 +68,19 @@ export function useSSE() {
             targetLang: data.data?.settings?.language || 'en-US'
           });
 
-          if (data.progress === 100) {
+          if (data.progress === 10) {
+            setNotifications(prev => [
+              {
+                id: `notif-trans-start-${Date.now()}`,
+                title: 'Tradução Solicitada',
+                message: `Tarefa enviada para o worker de tradução...`,
+                timestamp: new Date().toLocaleTimeString(),
+                variant: 'violet',
+                isRead: false
+              },
+              ...prev.filter(n => !n.id.startsWith('notif-trans-start-'))
+            ]);
+          } else if (data.progress === 100) {
             setNotifications(prev => [
               {
                 id: `notif-trans-${Date.now()}`,
@@ -89,7 +106,19 @@ export function useSSE() {
             jobId: data.jobId
           });
 
-          if (data.progress === 100) {
+          if (data.progress === 10) {
+            setNotifications(prev => [
+              {
+                id: `notif-pdf-start-${Date.now()}`,
+                title: 'Geração de PDF Solicitada',
+                message: `Tarefa enfileirada no worker-pdf...`,
+                timestamp: new Date().toLocaleTimeString(),
+                variant: 'amber',
+                isRead: false
+              },
+              ...prev.filter(n => !n.id.startsWith('notif-pdf-start-'))
+            ]);
+          } else if (data.progress === 100) {
             setNotifications(prev => [
               {
                 id: `notif-pdf-${Date.now()}`,

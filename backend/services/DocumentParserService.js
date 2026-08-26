@@ -48,16 +48,22 @@ class DocumentParserService {
    * Extract text from PDF buffer with multi-tier engine
    */
   async extractFromPdf(buffer) {
-    // 1. Primary Engine: pdf-parse (Standard industrial PDF text extractor)
+    // 1. Primary Engine: pdf-parse with custom page renderer for font style detection (<BOLD>, <ITALIC>)
     if (pdfParse) {
       try {
-        const parsed = await pdfParse(buffer);
+        const parsed = await pdfParse(buffer, { pagerender: this.renderPdfPageWithStyles.bind(this) });
         if (parsed && parsed.text && parsed.text.trim().length > 30) {
-          logger.info(`[DocumentParser] Extracted ${parsed.text.length} chars from PDF via pdf-parse (${parsed.numpages || 1} pages)`);
+          logger.info(`[DocumentParser] Extracted ${parsed.text.length} chars from PDF with font style tags via pdf-parse (${parsed.numpages || 1} pages)`);
           return parsed.text;
         }
       } catch (err) {
-        logger.warn('[DocumentParser] pdf-parse engine error, falling back to Flate stream decoder:', err.message);
+        logger.warn('[DocumentParser] pdf-parse styled engine error, trying standard pdf-parse:', err.message);
+        try {
+          const parsed = await pdfParse(buffer);
+          if (parsed && parsed.text && parsed.text.trim().length > 30) {
+            return parsed.text;
+          }
+        } catch (e2) {}
       }
     }
 
@@ -85,6 +91,124 @@ class DocumentParserService {
 
     // 4. Safe Fallback: Text token reconstruction excluding binary PDF headers
     return this.extractPdfSafeTokens(buffer);
+  }
+
+  /**
+   * Custom page renderer for pdf-parse that detects font weight/italic style per text item
+   */
+  async renderPdfPageWithStyles(pageData) {
+    const textContent = await pageData.getTextContent({ normalizeWhitespace: false, disableCombineTextItems: false });
+    const items = textContent.items || [];
+    if (items.length === 0) return '';
+
+    const processedItems = items.map(item => {
+      const str = item.str || '';
+      const fontName = item.fontName || '';
+      const transform = item.transform || [1, 0, 0, 1, 0, 0];
+      const x = transform[4] || 0;
+      const y = Math.round((transform[5] || 0) * 10) / 10;
+
+      let isBold = false;
+      let isItalic = false;
+
+      if (pageData.commonObjs && pageData.commonObjs.has(fontName)) {
+        const fontObj = pageData.commonObjs.get(fontName);
+        if (fontObj) {
+          const fn = String(fontObj.name || fontObj.fallbackName || '').toLowerCase();
+          if (fontObj.isBold || fontObj.bold || /bold|black|700|800|900|heavy|w7|w8|w9/i.test(fn)) {
+            isBold = true;
+          }
+          if (fontObj.isItalic || fontObj.italic || /italic|oblique|slanted/i.test(fn)) {
+            isItalic = true;
+          }
+        }
+      }
+
+      const fontNameLower = String(fontName).toLowerCase();
+      if (!isBold && /bold|black|heavy|700|800|900|w7|w8|w9/i.test(fontNameLower)) {
+        isBold = true;
+      }
+      if (!isItalic && /italic|oblique|slanted/i.test(fontNameLower)) {
+        isItalic = true;
+      }
+
+      return { str, x, y, isBold, isItalic };
+    });
+
+    // Group items into lines by Y coordinate (tolerance 3.5px)
+    const lines = [];
+    processedItems.forEach(item => {
+      if (!item.str && item.str !== '0') return;
+
+      let line = lines.find(l => Math.abs(l.y - item.y) <= 3.5);
+      if (!line) {
+        line = { y: item.y, items: [] };
+        lines.push(line);
+      }
+      line.items.push(item);
+    });
+
+    // Sort lines from top to bottom (PDF Y coordinate is inverted)
+    lines.sort((a, b) => b.y - a.y);
+
+    const lineStrings = lines.map(line => {
+      line.items.sort((a, b) => a.x - b.x);
+
+      const taggedTokens = [];
+      let currentGroup = null;
+
+      line.items.forEach(item => {
+        const text = item.str;
+        if (!text) return;
+
+        const styleKey = `${item.isBold ? 'B' : ''}${item.isItalic ? 'I' : ''}`;
+
+        if (!currentGroup) {
+          currentGroup = { styleKey, isBold: item.isBold, isItalic: item.isItalic, text };
+        } else if (currentGroup.styleKey === styleKey) {
+          const needsSpace = !currentGroup.text.endsWith(' ') && !text.startsWith(' ') && !/^[.,;:!?\)]/.test(text);
+          currentGroup.text += (needsSpace ? ' ' : '') + text;
+        } else {
+          taggedTokens.push(this.formatTaggedText(currentGroup));
+          currentGroup = { styleKey, isBold: item.isBold, isItalic: item.isItalic, text };
+        }
+      });
+
+      if (currentGroup) {
+        taggedTokens.push(this.formatTaggedText(currentGroup));
+      }
+
+      return taggedTokens.join(' ').replace(/\s{2,}/g, ' ').trim();
+    });
+
+    return lineStrings.filter(Boolean).join('\n');
+  }
+
+  formatTaggedText({ isBold, isItalic, text }) {
+    if (!text) return '';
+    const trimmed = text.trim();
+    if (!trimmed) return text;
+
+    const leadingMatch = text.match(/^\s*/);
+    const trailingMatch = text.match(/\s*$/);
+    const leadingSpace = leadingMatch ? leadingMatch[0] : '';
+    const trailingSpace = trailingMatch ? trailingMatch[0] : '';
+
+    // If string already contains tags or is only punctuation, don't re-wrap
+    if (/^<[A-Z]+>/.test(trimmed) || /^[.,;:!?\(\)\-\–\—]+$/.test(trimmed)) {
+      return text;
+    }
+
+    let result = trimmed;
+    if (isBold && isItalic) {
+      result = `<BOLD><ITALIC>${trimmed}</ITALIC></BOLD>`;
+    } else if (isBold) {
+      result = `<BOLD>${trimmed}</BOLD>`;
+    } else if (isItalic) {
+      result = `<ITALIC>${trimmed}</ITALIC>`;
+    }
+
+    return `${leadingSpace}${result}${trailingSpace}`;
   }
 
   /**
@@ -235,20 +359,29 @@ class DocumentParserService {
    * Extract text from Microsoft Word DOCX
    */
   async extractFromDocx(buffer) {
-    // 1. Primary Engine: mammoth
+    // 1. Primary Engine: mammoth HTML conversion to preserve bold/italic/underline styles
     if (mammoth) {
       try {
-        const result = await mammoth.extractRawText({ buffer });
+        const result = await mammoth.convertToHtml({ buffer });
         if (result && result.value && result.value.trim().length > 20) {
-          logger.info(`[DocumentParser] Extracted ${result.value.length} chars from DOCX via mammoth`);
-          return result.value;
+          const formattedText = this.convertHtmlToTaggedText(result.value);
+          if (formattedText && formattedText.trim().length > 20) {
+            logger.info(`[DocumentParser] Extracted ${formattedText.length} chars from DOCX with style tags via mammoth`);
+            return formattedText;
+          }
         }
       } catch (err) {
-        logger.warn('[DocumentParser] mammoth parsing failed, using XML fallback:', err.message);
+        logger.warn('[DocumentParser] mammoth HTML conversion failed, using raw text or XML fallback:', err.message);
+        try {
+          const rawResult = await mammoth.extractRawText({ buffer });
+          if (rawResult && rawResult.value && rawResult.value.trim().length > 20) {
+            return rawResult.value;
+          }
+        } catch (e2) {}
       }
     }
 
-    // 2. Secondary Engine: Unzip word/document.xml and parse paragraphs
+    // 2. Secondary Engine: Unzip word/document.xml and parse runs for <w:b> and <w:i>
     try {
       let searchIndex = 0;
       let docXml = '';
@@ -279,13 +412,28 @@ class DocumentParserService {
       }
 
       if (docXml) {
-        // Extract paragraph by paragraph <w:p>...</w:p>
         const paragraphs = docXml.match(/<w:p[\s\S]*?<\/w:p>/g) || [];
         const textLines = [];
 
         for (const p of paragraphs) {
-          const tTags = p.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
-          const pText = tTags.map(t => t.replace(/<[^>]+>/g, '')).join('');
+          const runs = p.match(/<w:r[\s\S]*?<\/w:r>/g) || [];
+          let pText = '';
+
+          for (const r of runs) {
+            const isBold = /<w:b(\s|\/|>)/.test(r) && !/<w:b\s+w:val="(false|0)"/.test(r);
+            const isItalic = /<w:i(\s|\/|>)/.test(r) && !/<w:i\s+w:val="(false|0)"/.test(r);
+
+            const tTags = r.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+            let rText = tTags.map(t => t.replace(/<[^>]+>/g, '')).join('');
+
+            if (rText.trim()) {
+              if (isBold && isItalic) rText = `<BOLD><ITALIC>${rText.trim()}</ITALIC></BOLD>`;
+              else if (isBold) rText = `<BOLD>${rText.trim()}</BOLD>`;
+              else if (isItalic) rText = `<ITALIC>${rText.trim()}</ITALIC>`;
+            }
+            pText += rText;
+          }
+
           if (pText.trim()) {
             textLines.push(pText.trim());
           }
@@ -300,6 +448,32 @@ class DocumentParserService {
     }
 
     return buffer.toString('utf-8');
+  }
+
+  convertHtmlToTaggedText(html) {
+    if (!html) return '';
+
+    let formatted = html
+      .replace(/<strong>([\s\S]*?)<\/strong>/gi, '<BOLD>$1</BOLD>')
+      .replace(/<b>([\s\S]*?)<\/b>/gi, '<BOLD>$1</BOLD>')
+      .replace(/<em>([\s\S]*?)<\/em>/gi, '<ITALIC>$1</ITALIC>')
+      .replace(/<i>([\s\S]*?)<\/i>/gi, '<ITALIC>$1</ITALIC>')
+      .replace(/<u>([\s\S]*?)<\/u>/gi, '<UNDERLINE>$1</UNDERLINE>')
+      .replace(/<mark[^>]*>([\s\S]*?)<\/mark>/gi, '<HIGHLIGHT>$1</HIGHLIGHT>')
+      .replace(/<del>([\s\S]*?)<\/del>/gi, '<STRIKETHROUGH>$1</STRIKETHROUGH>')
+      .replace(/<s>([\s\S]*?)<\/s>/gi, '<STRIKETHROUGH>$1</STRIKETHROUGH>')
+      .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '• $1\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    return formatted;
   }
 
   /**
@@ -419,17 +593,39 @@ class DocumentParserService {
 
       const categoryHeaderRegex = /^(LINGUAGENS|FRAMEWORKS|BANCOS DE DADOS|DEVOPS|PROTOCOLOS|METODOLOGIAS|OUTROS|FERRAMENTAS|TESTES|CLOUD|BIBLIOTECAS)/i;
 
+      const multiWordPhrases = [
+        'Clean Code & SOLID Principles', 'Clean Code', 'SOLID Principles',
+        'Arquitetura de Software', 'Headless Browser Management', 'Internacionalização (i18n)',
+        'Metodologias Ágeis (Scrum)', 'Metodologias Ágeis', 'Tailwind CSS',
+        'Oracle SQL', 'SQL Server', 'Docker Compose', 'APIs REST'
+      ];
+
       for (const sLine of skillLines) {
         if (categoryHeaderRegex.test(sLine) || (sLine === sLine.toUpperCase() && sLine.length < 35 && !sLine.includes(','))) {
           flushCategory();
           currentCat = sLine.replace(/[:\-]/g, '').trim();
         } else {
-          const items = sLine.split(/[,•|·/]/).map(s => s.trim()).filter(Boolean);
-          for (const it of items) {
-            if (it.split(/\s+/).length > 3 && !it.includes('&') && !it.includes('Clean Code')) {
-              catItems.push(...it.split(/\s+/).filter(Boolean));
-            } else {
-              catItems.push(it);
+          let working = sLine;
+          // Extract multi-word phrases first
+          for (const phrase of multiWordPhrases) {
+            const idx = working.toLowerCase().indexOf(phrase.toLowerCase());
+            if (idx !== -1) {
+              catItems.push(phrase);
+              working = working.slice(0, idx) + ' ' + working.slice(idx + phrase.length);
+            }
+          }
+          // Split remaining single tokens
+          const parts = working.split(/[,•|·/\n]/);
+          for (const p of parts) {
+            const trimmed = p.trim();
+            if (!trimmed) continue;
+            if (!trimmed.includes('&') && !trimmed.includes('(')) {
+              const tokens = trimmed.split(/\s+/).filter(Boolean);
+              for (const tok of tokens) {
+                if (tok.length > 0 && !catItems.includes(tok)) catItems.push(tok);
+              }
+            } else if (!catItems.includes(trimmed)) {
+              catItems.push(trimmed);
             }
           }
         }
@@ -554,12 +750,51 @@ class DocumentParserService {
   }
 
   /**
+   * Normalizes unwanted line breaks inside PDF paragraphs while preserving section headers
+   */
+  normalizePdfLineBreaks(text) {
+    if (!text || typeof text !== 'string') return '';
+
+    const lines = text.split('\n');
+    const normalizedLines = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const current = lines[i].trim();
+      if (!current) {
+        normalizedLines.push('');
+        continue;
+      }
+
+      if (normalizedLines.length === 0) {
+        normalizedLines.push(current);
+        continue;
+      }
+
+      const prevIndex = normalizedLines.length - 1;
+      const prev = normalizedLines[prevIndex];
+
+      const isPrevSectionHeader = /^(RESUMO|SUMMARY|PERFIL|COMPETÊNCIAS|SKILLS|HISTÓRICO|EXPERIÊNCIA|EXPERIENCE|FORMAÇÃO|EDUCATION|PROJETOS|PROJECTS)/i.test(prev);
+      const isCurrentSectionHeader = /^(RESUMO|SUMMARY|PERFIL|COMPETÊNCIAS|SKILLS|HISTÓRICO|EXPERIÊNCIA|EXPERIENCE|FORMAÇÃO|EDUCATION|PROJETOS|PROJECTS)/i.test(current);
+      const isBullet = /^[•\-\*\d+\.]\s/.test(current);
+      const prevEndsWithTerminator = /[.:!?]$/.test(prev);
+
+      if (!isPrevSectionHeader && !isCurrentSectionHeader && !isBullet && !prevEndsWithTerminator && prev.length > 0 && current.length > 0) {
+        normalizedLines[prevIndex] = prev + ' ' + current;
+      } else {
+        normalizedLines.push(current);
+      }
+    }
+
+    return normalizedLines.join('\n').replace(/ {2,}/g, ' ');
+  }
+
+  /**
    * Sanitizes and normalizes extracted resume text
    */
   cleanExtractedText(text) {
     if (!text || typeof text !== 'string') return '';
 
-    return text
+    const cleaned = text
       // Remove PDF binary header leaks (single line only)
       .replace(/%?PDF-[\d.]+/gi, '')
       .replace(/\/Title\s*\([^)\n\r]*\)/gi, '')
@@ -576,6 +811,8 @@ class DocumentParserService {
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
+
+    return this.normalizePdfLineBreaks(cleaned);
   }
 }
 

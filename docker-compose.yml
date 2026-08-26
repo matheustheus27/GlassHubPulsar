@@ -59,19 +59,47 @@ services:
       - REDIS_PORT=6379
       - USE_REDIS=true
       - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2
+      - OLLAMA_EMBED_MODEL=nomic-embed-text
+      - RABBITMQ_URL=amqp://glasshub:glasshub_mq_2026@rabbitmq:5672
       - JWT_SECRET=glasshub_super_secret_jwt_key_2026
       - DD_ENABLED=true
       - DD_AGENT_HOST=datadog
       - NOTIFICATION_EMAIL_ENABLED=false
       - NOTIFICATION_WHATSAPP_ENABLED=false
-    command: sh -c "npx prisma generate && npm run dev"
+    command: sh -c "npx prisma generate && node prisma/init-db.js && npm run dev"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - doc_network
     labels:
       com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "backend-api"}]'
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: glasshub-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=glasshub
+      - RABBITMQ_DEFAULT_PASS=glasshub_mq_2026
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "rabbitmq", "service": "message-broker"}]'
 
   postgres:
     image: postgres:16-alpine
@@ -88,7 +116,7 @@ services:
       - doc_network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
 
@@ -104,7 +132,7 @@ services:
       - doc_network
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
 
@@ -113,6 +141,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: glasshub-worker-translation
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/glasshub_db?schema=public
@@ -120,11 +151,17 @@ services:
       - REDIS_PORT=6379
       - USE_REDIS=true
       - OLLAMA_HOST=http://ollama:11434
+      - RABBITMQ_URL=amqp://glasshub:glasshub_mq_2026@rabbitmq:5672
     command: sh -c "node -e 'require(\"./workers/translationWorker\"); console.log(\"Translation worker running\"); setInterval(()=>{}, 1000);'"
     depends_on:
-      - postgres
-      - redis
-      - ollama
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - doc_network
     labels:
@@ -135,14 +172,24 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: glasshub-worker-notification
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/glasshub_db?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - USE_REDIS=true
+      - RABBITMQ_URL=amqp://glasshub:glasshub_mq_2026@rabbitmq:5672
     command: sh -c "node -e 'require(\"./workers/notificationWorker\"); console.log(\"Notification worker running\"); setInterval(()=>{}, 1000);'"
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - doc_network
     labels:
@@ -153,14 +200,24 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: glasshub-worker-pdf
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/glasshub_db?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - USE_REDIS=true
+      - RABBITMQ_URL=amqp://glasshub:glasshub_mq_2026@rabbitmq:5672
     command: sh -c "node -e 'require(\"./workers/pdfWorker\"); console.log(\"PDF worker running\"); setInterval(()=>{}, 1000);'"
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - doc_network
     labels:
@@ -171,20 +228,81 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: glasshub-worker-analytics
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/glasshub_db?schema=public
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - USE_REDIS=true
       - OLLAMA_HOST=http://ollama:11434
     command: sh -c "node -e 'require(\"./workers/analyticsWorker\"); console.log(\"Analytics/ATS worker running\"); setInterval(()=>{}, 1000);'"
     depends_on:
-      - redis
-      - ollama
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
     networks:
       - doc_network
     labels:
       com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "worker-analytics"}]'
+
+  worker-ocr:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: glasshub-worker-ocr
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/glasshub_db?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USE_REDIS=true
+      - OLLAMA_HOST=http://ollama:11434
+    command: sh -c "node -e 'require(\"./workers/ocrWorker\"); console.log(\"OCR Vision Worker running\"); setInterval(()=>{}, 1000);'"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    networks:
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "worker-ocr"}]'
+
+  worker-cdc:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: glasshub-worker-cdc
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/glasshub_db?schema=public
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - USE_REDIS=true
+    command: sh -c "node -e 'require(\"./workers/cdcWorker\"); console.log(\"CDC Cache Sync Worker running\"); setInterval(()=>{}, 1000);'"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - doc_network
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "nodejs", "service": "worker-cdc"}]'
 
   ollama:
     image: ollama/ollama:latest
@@ -195,7 +313,7 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - doc_network
-    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2 && wait" ]
+    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && (ollama pull llama3.2 || true) && (ollama pull llama3.2-vision || true) && (ollama pull qwen2.5:7b || true) && (ollama pull nomic-embed-text || true) && wait" ]
     labels:
       com.datadoghq.ad.logs: '[{"source": "ollama", "service": "ai-engine"}]'
 

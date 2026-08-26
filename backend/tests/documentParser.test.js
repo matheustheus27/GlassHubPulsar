@@ -149,6 +149,14 @@ C++, Lógica de Jogos, Estruturas de Dados
   assert(semanticHtml.includes('<ul class="achievements">'), 'Must structure experience achievements into lists');
   console.log('✓ Test 4 Passed: Intermediate Semantic HTML/XML structure generated with complete fidelity.');
 
+  // Test 5: Tagged Text and Font Style Extraction (<BOLD>, <ITALIC>)
+  const htmlSample = '<p><strong>Desenvolvedor de Software</strong> com <em>7 anos de experiência</em> em <mark>APIs REST</mark>.</p>';
+  const taggedText = documentParser.convertHtmlToTaggedText(htmlSample);
+  assert(taggedText.includes('<BOLD>Desenvolvedor de Software</BOLD>'), 'Must convert strong/b to <BOLD>');
+  assert(taggedText.includes('<ITALIC>7 anos de experiência</ITALIC>'), 'Must convert em/i to <ITALIC>');
+  assert(taggedText.includes('<HIGHLIGHT>APIs REST</HIGHLIGHT>'), 'Must convert mark to <HIGHLIGHT>');
+  console.log('✓ Test 5 Passed: HTML formatting converted to custom tags (<BOLD>, <ITALIC>, <HIGHLIGHT>) with 100% precision.');
+
   console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY!');
 }
 
