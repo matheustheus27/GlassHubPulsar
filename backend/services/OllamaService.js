@@ -1,12 +1,16 @@
 const TagProcessor = require('../layout/TagProcessor');
 const logger = require('../utils/logger');
-const documentParser = require('./DocumentParserService');
-const { RESUME_JSON_SCHEMA, validateAndCleanResumeData, normalizeToApplicationDTO } = require('../schemas/resumeSchema');
+const { validateAndCleanResumeData, normalizeToApplicationDTO } = require('../schemas/resumeSchema');
+const ResumeSectionParser = require('../parsers/ResumeSectionParser');
+const CandidateParser = require('../parsers/CandidateParser');
+const SummaryParser = require('../parsers/SummaryParser');
+const SkillsParser = require('../parsers/SkillsParser');
+const ExperienceParser = require('../parsers/ExperienceParser');
+const EducationParser = require('../parsers/EducationParser');
+const ProjectParser = require('../parsers/ProjectParser');
+const ResumeMergeService = require('../parsers/ResumeMergeService');
 
 class OllamaService {
-    /**
-     * Sanitizes raw candidate input text
-     */
     static #sanitizeInputText(text) {
         if (!text || typeof text !== 'string') return '';
         return text
@@ -40,73 +44,107 @@ class OllamaService {
     }
 
     /**
-     * Resilient Regex and Header Block Parser for Deterministic Metadata
+     * Resilient Header & Summary Extractor (Backward compatibility helper)
      */
     static #extractDeterministicFields(text) {
-        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-
-        // 1. Email & Phone
-        const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
-        const email = emailMatch ? emailMatch[0].trim() : '';
-
-        const phoneMatch = text.match(/(?:\+55\s*)?(?:\(?\d{2}\)?\s*)?9?\d{4}[-\s]?\d{4}/);
-        const phone = phoneMatch ? phoneMatch[0].trim() : '';
-
-        // 2. All Social / Portfolio Links
-        const linkedinMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+/i);
-        const linkedin = linkedinMatch ? (linkedinMatch[0].startsWith('http') ? linkedinMatch[0] : `https://${linkedinMatch[0]}`) : '';
-
-        const githubMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+/i);
-        const github = githubMatch ? (githubMatch[0].startsWith('http') ? githubMatch[0] : `https://${githubMatch[0]}`) : '';
-
-        const xMatch = text.match(/(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/[a-zA-Z0-9_-]+/i);
-        const x = xMatch ? (xMatch[0].startsWith('http') ? xMatch[0] : `https://${xMatch[0]}`) : '';
-
-        const instagramMatch = text.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/[a-zA-Z0-9_.]+/i);
-        const instagram = instagramMatch ? (instagramMatch[0].startsWith('http') ? instagramMatch[0] : `https://${instagramMatch[0]}`) : '';
-
-        const facebookMatch = text.match(/(?:https?:\/\/)?(?:www\.)?facebook\.com\/[a-zA-Z0-9_.]+/i);
-        const facebook = facebookMatch ? (facebookMatch[0].startsWith('http') ? facebookMatch[0] : `https://${facebookMatch[0]}`) : '';
-
-        const portfolioMatch = text.match(/(?:https?:\/\/)[a-zA-Z0-9_-]+\.github\.io\/?/i);
-        const portfolio = portfolioMatch ? portfolioMatch[0] : '';
-
-        // 3. Clean Location & Header Line Segmentation
-        let name = '';
-        let title = '';
-        let location = '';
-
-        const locationLineRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]{2,30},\s*[A-Z]{2}(?:\s*-\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)?$/;
-
-        const headerCandidates = [];
-        for (const line of lines) {
-            if (/^(RESUMO|COMPETÊNCIAS|EXPERIÊNCIA|HISTÓRICO|FORMAÇÃO|PROJETOS|SUMMARY|SKILLS|EDUCATION)/i.test(line)) {
-                break;
-            }
-            if (line.includes('@') || line.startsWith('http') || line.includes('+55')) continue;
-
-            if (locationLineRegex.test(line)) {
-                location = line.trim();
-            } else {
-                headerCandidates.push(line);
-            }
-        }
-
-        if (headerCandidates.length > 0) name = headerCandidates[0].replace(/^[#*\-•\s]+/, '').trim();
-        if (headerCandidates.length > 1) title = headerCandidates[1].replace(/^[#*\-•\s]+/, '').trim();
-
-        // 4. Summary extraction
-        let professionalSummary = '';
-        const summaryRegex = /(?:RESUMO PROFISSIONAL|RESUMO|SUMMARY|PERFIL)\s*\n([\s\S]*?)(?=\n(?:COMPETÊNCIAS|SKILLS|HISTÓRICO|EXPERIÊNCIA|FORMAÇÃO|PROJETOS|EDUCATION)|$)/i;
-        const summaryMatch = text.match(summaryRegex);
-        if (summaryMatch) {
-            professionalSummary = summaryMatch[1].trim();
-        }
+        const sections = ResumeSectionParser.parseSections(text);
+        const candidate = CandidateParser.parseCandidate(sections.header, text);
+        const professionalSummary = SummaryParser.parseSummary(sections.summary);
 
         return {
-            candidate: { name, title, location, email, phone, linkedin, github, x, instagram, facebook, portfolio },
+            candidate,
             professionalSummary
         };
+    }
+
+    /**
+     * Calls Ollama API for semantic entity extraction
+     */
+    async #queryOllamaExtraction(promptText, options = {}) {
+        const ollamaHost = process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || "http://ollama:11434";
+        const model = options.model || process.env.OLLAMA_MODEL || "llama3.2";
+        const numCtx = Number(options.numCtx || process.env.OLLAMA_NUM_CTX || 8192);
+        const numPredict = Number(options.numPredict || process.env.OLLAMA_NUM_PREDICT || 4096);
+
+        const systemPrompt = `You are a high-precision resume information extraction engine.
+
+This is an EXTRACTION task, not a generation task.
+
+Extract ONLY information explicitly present in the provided text.
+
+STRICT RULES:
+1. Never invent information.
+2. Never infer missing information.
+3. Never rewrite extracted text.
+4. Never summarize extracted text.
+5. Never translate extracted text.
+6. Never improve grammar.
+7. Never create metrics.
+8. Never create technologies.
+9. Never create descriptions.
+10. Never change company names.
+11. Never change project names.
+12. Never change dates.
+13. Never convert URLs to Markdown.
+14. Never convert URLs to HTML.
+15. Preserve formatting tags such as <BOLD>, <ITALIC>, <UNDERLINE>, <HIGHLIGHT> and <STRIKETHROUGH>.
+16. If a field does not exist, return an empty string "".
+17. If there are no items, return an empty array [].
+18. Preserve the original wording as closely as possible.
+19. In "skills", capture the exact original category name in "name" (e.g. "MINHA STACK", "TECNOLOGIAS DE BACK-END", "LINGUAGENS") and all its items in "items".
+20. In "experiences", relate company, position, period, generalDescription, and bullets. "generalDescription" MUST be "" unless there is an independent description paragraph separate from the position and bullets.
+21. In "education", relate institution, degree/course, period/status (e.g. "Previsão de conclusão em 2028", "Concluído em 2015"), and full description.
+22. In "projects", capture project title in "name", the technologies/summary line in "description", and each bullet item in "bullets".
+
+Output ONLY valid JSON matching this schema:
+{
+  "skills": [{ "name": "string", "items": ["string"] }],
+  "experiences": [{ "company": "string", "position": "string", "period": "string", "generalDescription": "string", "bullets": ["string"] }],
+  "education": [{ "institution": "string", "degree": "string", "period": "string", "description": "string" }],
+  "projects": [{ "name": "string", "description": "string", "bullets": ["string"] }]
+}`;
+
+        const controller = new AbortController();
+        const timeoutMs = options.timeout || 30000;
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            logger.info(`[OllamaService] Semantic extraction via Ollama (model: ${model}, ctx: ${numCtx})`);
+            const response = await fetch(`${ollamaHost}/api/generate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model,
+                    system: systemPrompt,
+                    prompt: `### DOCUMENT TEXT TO EXTRACT:\n\n${promptText}`,
+                    format: "json",
+                    stream: false,
+                    options: {
+                        temperature: 0.1,
+                        num_ctx: numCtx,
+                        num_predict: numPredict
+                    }
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                logger.warn(`[OllamaService] Ollama HTTP error ${response.status}`);
+                return null;
+            }
+
+            const data = await response.json();
+            if (data && data.response) {
+                return JSON.parse(data.response.trim());
+            }
+            return null;
+        } catch (err) {
+            clearTimeout(timeout);
+            logger.warn('[OllamaService] Semantic extraction unavailable or offline, utilizing structural extraction:', err.message);
+            return null;
+        }
     }
 
     async parseResumeWithStructuredSchema(rawText, options = {}) {
@@ -115,119 +153,43 @@ class OllamaService {
         }
 
         const sanitizedText = OllamaService.#sanitizeInputText(rawText);
-        const ollamaHost = process.env.OLLAMA_HOST || "http://ollama:11434";
-        const model = options.model || process.env.OLLAMA_MODEL || "llama3.2";
         const targetLanguage = options.language || (/[ãõáéíóúâêîôûç]/i.test(sanitizedText) ? 'pt-BR' : 'en-US');
 
-        const heuristicData = OllamaService.#extractDeterministicFields(sanitizedText);
+        // STAGE 1: URL Protection & Masking
+        const { maskedText, urlMap } = CandidateParser.maskUrls(sanitizedText);
 
-        const systemPrompt = `You are a high-precision deterministic resume parsing engine.
-Analyze the document text and extract technical skills, professional experiences, academic education, and featured projects into valid JSON.
+        // STAGE 2: Structural Section Detection
+        const sections = ResumeSectionParser.parseSections(maskedText);
+        logger.info(`[ResumeParser] Structural sections detected:\nsummary=${!!sections.summary}\nskills=${!!sections.skills}\nexperience=${!!sections.experience}\neducation=${!!sections.education}\nprojects=${!!sections.projects}`);
 
-### JSON SCHEMA:
-{
-  "skills": [
-    {
-      "category": "string (e.g. LINGUAGENS, FRAMEWORKS E BIBLIOTECAS, BANCOS DE DADOS, DEVOPS, METODOLOGIAS ÁGEIS)",
-      "items": ["string"]
-    }
-  ],
-  "experiences": [
-    {
-      "company": "string",
-      "position": "string",
-      "period": "string",
-      "generalDescription": "string",
-      "achievements": ["string (each bullet point as a separate item)"]
-    }
-  ],
-  "education": [
-    {
-      "institution": "string (e.g. CEFET-MG, Sistema Divina Providência)",
-      "degree": "string (e.g. Bacharelado em Engenharia de Computação, Técnico em Informática)",
-      "fieldOfStudy": "string",
-      "statusOrPeriod": "string (e.g. Previsão de conclusão em 2028, Concluído em 2015)",
-      "details": "string (all descriptive text paragraphs explaining curriculum or focus)"
-    }
-  ],
-  "projects": [
-    {
-      "name": "string",
-      "technologies": ["string"],
-      "description": "string",
-      "achievements": ["string (extract EACH bullet point as a separate item)"]
-    }
-  ]
-}
+        // STAGE 3: Structural Extraction (Deterministic baseline)
+        const structuralData = {
+            candidate: CandidateParser.parseCandidate(sections.header, sanitizedText),
+            professionalSummary: SummaryParser.parseSummary(sections.summary),
+            skills: SkillsParser.parseSkills(sections.skills),
+            experiences: ExperienceParser.parseExperiences(sections.experience),
+            education: EducationParser.parseEducation(sections.education),
+            projects: ProjectParser.parseProjects(sections.projects)
+        };
 
-### CRITICAL RULES:
-1. Output ONLY raw JSON matching the schema. No markdown fences.
-2. EDUCATION: Extract EVERY education section, capturing the timeframe into "statusOrPeriod" and the long description into "details".
-3. PROJECTS: Do NOT leave "achievements" empty. Extract every bullet point under the project into the "achievements" array.
-4. Preserve style tags (<BOLD>, </BOLD>, <ITALIC>, </ITALIC>) verbatim inside text items.`;
+        logger.info(`[ResumeParser] Structural baseline extraction:\nskills=${structuralData.skills.length}\nexperiences=${structuralData.experiences.length}\neducation=${structuralData.education.length}\nprojects=${structuralData.projects.length}`);
 
-        try {
-            logger.info(`[OllamaService] Streaming semantic parsing (model: ${model})`);
-            const response = await fetch(`${ollamaHost}/api/generate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model,
-                    system: systemPrompt,
-                    prompt: `### DOCUMENT TEXT:\n\n${sanitizedText}`,
-                    format: "json",
-                    stream: true,
-                    options: {
-                        temperature: 0.1,
-                        num_ctx: 4096,
-                        num_predict: 2048
-                    }
-                })
-            });
+        // STAGE 4: Ollama Semantic Extraction & Interpretation
+        let llmData = {};
+        const llmResponse = await this.#queryOllamaExtraction(maskedText, options);
 
-            if (!response.ok) {
-                throw new Error(`Ollama HTTP error ${response.status}`);
-            }
-
-            let fullLlmResponse = '';
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n').filter(Boolean);
-
-                for (const line of lines) {
-                    try {
-                        const jsonChunk = JSON.parse(line);
-                        if (jsonChunk.response) {
-                            fullLlmResponse += jsonChunk.response;
-                        }
-                    } catch (err) {}
-                }
-            }
-
-            const parsedLlmData = JSON.parse(fullLlmResponse.trim());
-
-            const mergedPayload = {
-                candidate: heuristicData.candidate,
-                professionalSummary: heuristicData.professionalSummary || parsedLlmData.professionalSummary || '',
-                skills: parsedLlmData.skills || [],
-                experiences: parsedLlmData.experiences || [],
-                education: parsedLlmData.education || [],
-                projects: parsedLlmData.projects || []
-            };
-
-            const cleaned = validateAndCleanResumeData(mergedPayload);
-            return normalizeToApplicationDTO(cleaned, targetLanguage);
-        } catch (error) {
-            logger.error(`[OllamaService] Streaming failed, using fallback:`, error.message);
-            const fallbackRaw = OllamaService.#advancedHeuristicExtract(sanitizedText);
-            return normalizeToApplicationDTO(fallbackRaw, targetLanguage);
+        if (llmResponse && typeof llmResponse === 'object') {
+            // Restore any masked URL tokens in the LLM response
+            llmData = CandidateParser.unmaskUrls(llmResponse, urlMap);
+            logger.info(`[ResumeParser] LLM extraction completed:\nskills=${llmData.skills?.length || 0}\nexperiences=${llmData.experiences?.length || 0}\neducation=${llmData.education?.length || 0}\nprojects=${llmData.projects?.length || 0}`);
         }
+
+        // STAGE 5: Controlled Merge (Structural anchor + LLM semantic interpretation)
+        const mergedPayload = ResumeMergeService.mergeAll(structuralData, llmData, sections);
+
+        // STAGE 6: Validation and Application DTO Normalization
+        const cleaned = validateAndCleanResumeData(mergedPayload);
+        return normalizeToApplicationDTO(cleaned, targetLanguage);
     }
 
     static async parseResumeWithStructuredSchema(rawText, options = {}) {
@@ -250,7 +212,7 @@ Analyze the document text and extract technical skills, professional experiences
 
     static async chatWithDocument(document, messages = [], userId = 'default_user') {
         const RAGService = require('./RAGService');
-        const ollamaHost = process.env.OLLAMA_HOST || "http://ollama:11434";
+        const ollamaHost = process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST || "http://ollama:11434";
 
         const language = document?.settings?.language || "pt-BR";
         const isPortuguese = language.toLowerCase().startsWith("pt");
@@ -363,324 +325,6 @@ Analyze the document text and extract technical skills, professional experiences
             role: "assistant",
             content: replyContent
         };
-    }
-
-    /**
-     * Advanced heuristic rule-based extractor
-     */
-    static #advancedHeuristicExtract(text) {
-        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-
-        const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-        const email = emailMatch ? emailMatch[0] : '';
-
-        const phoneMatch = text.match(/(\+55\s*)?\(?\d{2}\)?\s*9?\d{4}[-\s]?\d{4}/);
-        const phone = phoneMatch ? phoneMatch[0].trim() : '';
-
-        const linkedinMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)/i);
-        const linkedinUrl = linkedinMatch ? (linkedinMatch[0].startsWith('http') ? linkedinMatch[0] : `https://${linkedinMatch[0]}`) : '';
-
-        const githubMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
-        const githubUrl = githubMatch ? (githubMatch[0].startsWith('http') ? githubMatch[0] : `https://${githubMatch[0]}`) : '';
-
-        const locationMatch = text.match(/📍\s*([A-Za-zÀ-ÖØ-öø-ÿ\s]+,\s*[A-Z]{2}(?:\s*-\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)?)/i)
-            || text.match(/([A-Za-zÀ-ÖØ-öø-ÿ\s]{3,30},\s*[A-Z]{2}(?:\s*-\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)?)/);
-        const location = locationMatch ? locationMatch[1].trim() : 'Brasil';
-
-        let candidateName = 'Candidato';
-        let candidateTitle = 'Desenvolvedor de Software';
-
-        for (let i = 0; i < Math.min(lines.length, 5); i++) {
-            const line = lines[i];
-            const isSectionHeader = /RESUMO|EXPERIÊNCIA|COMPETÊNCIAS|FORMAÇÃO|PROJETOS/i.test(line);
-            const isContact = line.includes('@') || line.includes('http') || line.includes('📍') || line.includes('📞') || line.includes('✉️');
-            if (!isSectionHeader && !isContact && line.length > 3 && line.length < 50) {
-                if (candidateName === 'Candidato') {
-                    candidateName = line.replace(/^[#*\-•\s]+/, '').trim();
-                } else if (candidateTitle === 'Desenvolvedor de Software' && !line.includes(candidateName)) {
-                    candidateTitle = line.replace(/^[#*\-•\s]+/, '').trim();
-                    break;
-                }
-            }
-        }
-
-        const sections = this.#sliceSections(text);
-        const summaryText = sections['RESUMO'] || sections['SUMMARY'] || sections['PERFIL'] || '';
-        const skills = this.#parseSkillsSection(sections['COMPETÊNCIAS'] || sections['SKILLS'] || sections['TECNOLOGIAS'] || '');
-        const experiences = this.#parseExperienceSection(sections['EXPERIÊNCIA'] || sections['HISTÓRICO'] || '');
-        const educations = this.#parseEducationSection(sections['FORMAÇÃO'] || sections['EDUCAÇÃO'] || '');
-        const projects = this.#parseProjectsSection(sections['PROJETOS'] || '');
-
-        return {
-            candidate: {
-                name: candidateName,
-                title: candidateTitle,
-                location,
-                email,
-                phone,
-                linkedin: linkedinUrl || '',
-                github: githubUrl || ''
-            },
-            professionalSummary: summaryText || 'Profissional de tecnologia com sólida experiência no desenvolvimento de sistemas escaláveis e modernas arquiteturas de software.',
-            skills: skills.map(s => ({ category: s.name, items: s.items })),
-            experiences: experiences.map(exp => ({
-                company: exp.company,
-                position: exp.position,
-                period: exp.period,
-                generalDescription: '',
-                achievements: exp.bullets
-            })),
-            education: educations.map(edu => ({
-                institution: edu.organization,
-                degree: edu.degree,
-                fieldOfStudy: '',
-                statusOrPeriod: edu.period,
-                details: edu.description
-            })),
-            projects: projects.map(proj => ({
-                name: proj.title,
-                technologies: [],
-                description: proj.description,
-                achievements: proj.bullets
-            }))
-        };
-    }
-
-    static #sliceSections(text) {
-        const sectionMap = {};
-        const headerRegex = /(?:^|\n)(RESUMO PROFISSIONAL|RESUMO|SUMMARY|COMPETÊNCIAS TÉCNICAS|COMPETÊNCIAS & TECNOLOGIAS|COMPETÊNCIAS|HABILIDADES|SKILLS|EXPERIÊNCIA PROFISSIONAL|HISTÓRICO PROFISSIONAL|EXPERIÊNCIA|EXPERIENCIAS|FORMAÇÃO ACADÊMICA|FORMAÇÃO|EDUCAÇÃO|EDUCATION|PROJETOS PESSOAIS|PROJETOS DE DESTAQUE|PROJETOS|PROJECTS)(?:\s*\(CONTINUAÇÃO\))?(?::|\n|$)/gi;
-
-        const matches = [];
-        let match;
-        while ((match = headerRegex.exec(text)) !== null) {
-            matches.push({
-                title: match[1].toUpperCase(),
-                index: match.index,
-                length: match[0].length
-            });
-        }
-
-        for (let i = 0; i < matches.length; i++) {
-            const current = matches[i];
-            const next = matches[i + 1];
-            const start = current.index + current.length;
-            const end = next ? next.index : text.length;
-            const content = text.slice(start, end).trim();
-
-            let normKey = 'OUTROS';
-            if (current.title.includes('RESUMO') || current.title.includes('SUMMARY') || current.title.includes('PERFIL')) normKey = 'RESUMO';
-            else if (current.title.includes('COMPETÊNCIA') || current.title.includes('SKILL') || current.title.includes('HABILIDADE')) normKey = 'COMPETÊNCIAS';
-            else if (current.title.includes('EXPERIÊNCIA') || current.title.includes('HISTÓRICO')) normKey = 'EXPERIÊNCIA';
-            else if (current.title.includes('FORMAÇÃO') || current.title.includes('EDUCAÇÃO') || current.title.includes('EDUCATION')) normKey = 'FORMAÇÃO';
-            else if (current.title.includes('PROJETO') || current.title.includes('PROJECT')) normKey = 'PROJETOS';
-
-            if (sectionMap[normKey]) {
-                sectionMap[normKey] += '\n\n' + content;
-            } else {
-                sectionMap[normKey] = content;
-            }
-        }
-
-        return sectionMap;
-    }
-
-    static #tokenizeSkillsLine(line) {
-        const multiWordPhrases = [
-            'Clean Code & SOLID Principles',
-            'Clean Code',
-            'SOLID Principles',
-            'Arquitetura de Software',
-            'Headless Browser Management',
-            'Internacionalização (i18n)',
-            'Metodologias Ágeis (Scrum)',
-            'Metodologias Ágeis',
-            'Tailwind CSS',
-            'Oracle SQL',
-            'SQL Server',
-            'Docker Compose',
-            'APIs REST'
-        ];
-
-        let working = line;
-        const extracted = [];
-
-        for (const phrase of multiWordPhrases) {
-            const idx = working.toLowerCase().indexOf(phrase.toLowerCase());
-            if (idx !== -1) {
-                extracted.push(phrase);
-                working = working.slice(0, idx) + ' ' + working.slice(idx + phrase.length);
-            }
-        }
-
-        const parts = working.split(/[,•|·/\n]/);
-        for (const part of parts) {
-            const trimmed = part.trim();
-            if (!trimmed) continue;
-
-            if (!trimmed.includes('&') && !trimmed.includes('(')) {
-                const tokens = trimmed.split(/\s+/).filter(Boolean);
-                for (const tok of tokens) {
-                    if (tok.length > 0 && !extracted.includes(tok)) {
-                        extracted.push(tok);
-                    }
-                }
-            } else {
-                if (!extracted.includes(trimmed)) extracted.push(trimmed);
-            }
-        }
-
-        return extracted;
-    }
-
-    static #parseSkillsSection(text) {
-        if (!text) return [];
-
-        const categories = [];
-        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-
-        let currentCategory = null;
-        const categoryHeaderRegex = /^(LINGUAGENS|FRAMEWORKS|BANCOS DE DADOS|DEVOPS|PROTOCOLOS|METODOLOGIAS|OUTROS|FERRAMENTAS|TESTES|CLOUD|BIBLIOTECAS)/i;
-
-        for (const line of lines) {
-            if (categoryHeaderRegex.test(line) || (line === line.toUpperCase() && line.length < 35 && !line.includes(','))) {
-                if (currentCategory && currentCategory.items.length > 0) {
-                    categories.push(currentCategory);
-                }
-                currentCategory = {
-                    name: line.replace(/[:\-]/g, '').trim(),
-                    items: []
-                };
-            } else {
-                if (!currentCategory) {
-                    currentCategory = { name: 'Competências Principais', items: [] };
-                }
-                const tokens = this.#tokenizeSkillsLine(line);
-                currentCategory.items.push(...tokens);
-            }
-        }
-
-        if (currentCategory && currentCategory.items.length > 0) {
-            categories.push(currentCategory);
-        }
-
-        return categories.map(c => ({
-            name: c.name,
-            items: Array.from(new Set(c.items)).filter(Boolean)
-        }));
-    }
-
-    static #parseExperienceSection(text) {
-        if (!text) return [];
-
-        const experiences = [];
-        const blocks = text.split(/\n(?=[A-Z0-9][A-Za-z0-9\s().\/-]{2,40}(?:\s+(?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez|\d{4})|\n))/g);
-
-        for (const block of blocks) {
-            const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-            if (lines.length < 2) continue;
-
-            const firstLine = lines[0];
-            const dateMatch = firstLine.match(/((?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez|\d{4})[^\n–—]*[–—\-]\s*(?:Presente|Atual|\d{4}|(?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez)[^\n]*))/i)
-                || (lines[1] ? lines[1].match(/((?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez|\d{4})[^\n–—]*[–—\-]\s*(?:Presente|Atual|\d{4}|(?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez)[^\n]*))/i) : null);
-
-            const period = dateMatch ? dateMatch[0].trim() : 'Período Recente';
-            const company = firstLine.replace(period, '').replace(/[–—\-]/g, '').trim() || 'Empresa';
-            const position = lines[1] && !lines[1].startsWith('•') && !lines[1].startsWith('-') ? lines[1].replace(/^[–—\-•\s]+/, '').trim() : 'Desenvolvedor';
-
-            const bullets = [];
-            const startIndex = (lines[1] === position) ? 2 : 1;
-
-            for (let i = startIndex; i < lines.length; i++) {
-                const bLine = lines[i].replace(/^[•\-\*]\s*/, '').trim();
-                if (bLine.length > 10) {
-                    bullets.push(bLine);
-                }
-            }
-
-            if (bullets.length === 0) {
-                bullets.push('Atuação estratégica em projetos de tecnologia e engenharia de software.');
-            }
-
-            experiences.push({
-                company,
-                position,
-                period,
-                bullets
-            });
-        }
-
-        return experiences;
-    }
-
-    static #parseEducationSection(text) {
-        if (!text) return [];
-
-        const educations = [];
-        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-
-        let i = 0;
-        while (i < lines.length) {
-            const orgLine = lines[i];
-            const degreeLine = lines[i + 1] || '';
-            const descLine = lines[i + 2] || '';
-
-            const dateMatch = orgLine.match(/(?:Previsão de conclusão em|Concluído em|Concluído|Em andamento|\d{4}\s*[-–]\s*\d{4}|\d{4})/i)
-                || degreeLine.match(/(?:Previsão de conclusão em|Concluído em|Concluído|Em andamento|\d{4}\s*[-–]\s*\d{4}|\d{4})/i);
-
-            const period = dateMatch ? dateMatch[0].trim() : 'Concluído';
-            const organization = orgLine.replace(period, '').trim();
-            const degree = degreeLine.replace(period, '').trim() || 'Graduação / Curso';
-
-            educations.push({
-                organization: organization || 'Instituição de Ensino',
-                degree: degree || 'Bacharelado / Técnico',
-                period,
-                description: descLine.length > 20 ? descLine : 'Formação acadêmica com forte fundamentação técnica e prática.'
-            });
-
-            i += (descLine.length > 20 ? 3 : 2);
-        }
-
-        return educations;
-    }
-
-    static #parseProjectsSection(text) {
-        if (!text) return [];
-
-        const projects = [];
-        const rawBlocks = text.split(/\n\s*\n+/);
-
-        for (const block of rawBlocks) {
-            const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-            if (lines.length === 0) continue;
-
-            const title = lines[0].replace(/^[#•\-\*\s]+/, '').trim();
-            const bullets = [];
-            let description = '';
-
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i];
-                if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
-                    const b = line.replace(/^[•\-\*\s]+/, '').trim();
-                    if (b.length > 5) bullets.push(b);
-                } else if (!description) {
-                    description = line;
-                } else {
-                    bullets.push(line);
-                }
-            }
-
-            if (title.length > 2) {
-                projects.push({
-                    title,
-                    link: '',
-                    description: description || 'Projeto prático de engenharia de software.',
-                    bullets: bullets.length > 0 ? bullets : ['Desenvolvimento completo da solução com arquitetura moderna.']
-                });
-            }
-        }
-
-        return projects;
     }
 }
 

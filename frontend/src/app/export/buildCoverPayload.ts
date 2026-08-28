@@ -14,11 +14,12 @@ export function buildCoverPayload(
   const networking = personal.contact?.networking || {};
   const networkContacts: Array<{ title: string; link: string; icon: string }> = [];
 
-  const knownKeys = ['portfolio', 'linkedin', 'github', 'twitter', 'instagram', 'facebook'];
+  const knownKeys = ['portfolio', 'linkedin', 'github', 'x', 'twitter', 'instagram', 'facebook'];
   if (networking.portfolio?.url) networkContacts.push({ title: networking.portfolio.name || 'Portfólio', link: networking.portfolio.url, icon: networking.portfolio.icon || '🌐' });
   if (networking.linkedin?.url) networkContacts.push({ title: networking.linkedin.name || 'LinkedIn', link: networking.linkedin.url, icon: networking.linkedin.icon || '💼' });
   if (networking.github?.url) networkContacts.push({ title: networking.github.name || 'GitHub', link: networking.github.url, icon: networking.github.icon || '🐙' });
-  if (networking.twitter?.url) networkContacts.push({ title: networking.twitter.name || 'X', link: networking.twitter.url, icon: networking.twitter.icon || '𝕏' });
+  const xContact = networking.x || networking.twitter;
+  if (xContact?.url) networkContacts.push({ title: xContact.name || 'X', link: xContact.url, icon: xContact.icon || '𝕏' });
   if (networking.instagram?.url) networkContacts.push({ title: networking.instagram.name || 'Instagram', link: networking.instagram.url, icon: networking.instagram.icon || '📷' });
   if (networking.facebook?.url) networkContacts.push({ title: networking.facebook.name || 'Facebook', link: networking.facebook.url, icon: networking.facebook.icon || '📘' });
 

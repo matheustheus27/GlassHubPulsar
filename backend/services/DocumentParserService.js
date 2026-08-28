@@ -465,7 +465,7 @@ class DocumentParserService {
       .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, '• $1\n')
       .replace(/<\/p>/gi, '\n')
       .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<[^>]+>/g, '')
+      .replace(/<(?!\/?(BOLD|ITALIC|UNDERLINE|HIGHLIGHT|STRIKETHROUGH)\b)[^>]+>/gi, '')
       .replace(/&nbsp;/gi, ' ')
       .replace(/&amp;/gi, '&')
       .replace(/&lt;/gi, '<')
@@ -506,42 +506,30 @@ class DocumentParserService {
     let candidateName = 'Candidato';
     let candidateTitle = 'Desenvolvedor de Software';
 
-    for (let i = 0; i < Math.min(lines.length, 5); i++) {
-      const line = lines[i];
-      const isSectionHeader = /^(RESUMO|EXPERIÊNCIA|COMPETÊNCIAS|FORMAÇÃO|PROJETOS|SUMMARY|EXPERIENCE|SKILLS|EDUCATION|PROJECTS)/i.test(line);
-      const isContact = line.includes('@') || line.includes('http') || line.includes('📍') || line.includes('📞') || line.includes('✉️');
-      if (!isSectionHeader && !isContact && line.length > 3 && line.length < 50) {
-        if (candidateName === 'Candidato') {
-          candidateName = line.replace(/^[#*\-•\s]+/, '').trim();
-        } else if (candidateTitle === 'Desenvolvedor de Software' && !line.includes(candidateName)) {
-          candidateTitle = line.replace(/^[#*\-•\s]+/, '').trim();
-          break;
+    try {
+      const CandidateParser = require('../parsers/CandidateParser');
+      const candidateData = CandidateParser.parseCandidate(text, text);
+      if (candidateData.name) candidateName = candidateData.name;
+      if (candidateData.title) candidateTitle = candidateData.title;
+    } catch (e) {
+      for (let i = 0; i < Math.min(lines.length, 5); i++) {
+        const line = lines[i];
+        const isSectionHeader = /^(RESUMO|EXPERIÊNCIA|COMPETÊNCIAS|FORMAÇÃO|PROJETOS|SUMMARY|EXPERIENCE|SKILLS|EDUCATION|PROJECTS)/i.test(line);
+        const isContact = line.includes('@') || line.includes('http') || line.includes('📍') || line.includes('📞') || line.includes('✉️');
+        if (!isSectionHeader && !isContact && line.length > 3 && line.length < 80) {
+          if (candidateName === 'Candidato') {
+            candidateName = line.replace(/^[#*\-•\s]+/, '').trim();
+          } else if (candidateTitle === 'Desenvolvedor de Software' && !line.includes(candidateName)) {
+            candidateTitle = line.replace(/^[#*\-•\s]+/, '').trim();
+            break;
+          }
         }
       }
     }
 
-    // 3. Section Slicing
-    const sections = {};
-    let currentSection = 'HEADER';
-    let currentBuffer = [];
-
-    const sectionHeaderRegex = /^(RESUMO\s*PROFISSIONAL|SUMMARY|PERFIL|COMPETÊNCIAS\s*TÉCNICAS|COMPETÊNCIAS|SKILLS|TECNOLOGIAS|EXPERIÊNCIA\s*PROFISSIONAL|EXPERIÊNCIA|HISTÓRICO\s*PROFISSIONAL|EXPERIENCE|FORMAÇÃO\s*ACADÊMICA|FORMAÇÃO|EDUCAÇÃO|EDUCATION|PROJETOS\s*PESSOAIS|PROJETOS|PROJECTS)(?:\s*\(CONTINUAÇÃO\))?$/i;
-
-    for (const line of lines) {
-      if (sectionHeaderRegex.test(line)) {
-        if (currentBuffer.length > 0) {
-          sections[currentSection] = (sections[currentSection] || '') + '\n' + currentBuffer.join('\n');
-        }
-        currentSection = line.toUpperCase().replace(/\s*\(CONTINUAÇÃO\)/g, '').trim();
-        currentBuffer = [];
-      } else {
-        currentBuffer.push(line);
-      }
-    }
-
-    if (currentBuffer.length > 0) {
-      sections[currentSection] = (sections[currentSection] || '') + '\n' + currentBuffer.join('\n');
-    }
+    // 3. Section Slicing via ResumeSectionParser
+    const ResumeSectionParser = require('../parsers/ResumeSectionParser');
+    const sections = ResumeSectionParser.parseSections(text);
 
     // 4. Build Structured HTML
     let html = `<!DOCTYPE html>\n<article class="glasshub-resume-document">\n`;
@@ -558,120 +546,52 @@ class DocumentParserService {
     html += `  </header>\n\n`;
 
     // SUMMARY SECTION
-    const summaryKey = Object.keys(sections).find(k => /RESUMO|SUMMARY|PERFIL/i.test(k));
-    if (summaryKey && sections[summaryKey]) {
+    if (sections.summary) {
       html += `  <section class="resume-section" data-section="SUMMARY">\n`;
       html += `    <h2>RESUMO PROFISSIONAL</h2>\n`;
-      html += `    <p class="summary-text">${sections[summaryKey].trim()}</p>\n`;
+      html += `    <p class="summary-text">${sections.summary.trim()}</p>\n`;
       html += `  </section>\n\n`;
     }
 
     // SKILLS SECTION
-    const skillsKey = Object.keys(sections).find(k => /COMPETÊNCIAS|SKILLS|TECNOLOGIAS/i.test(k));
-    if (skillsKey && sections[skillsKey]) {
+    if (sections.skills) {
       html += `  <section class="resume-section" data-section="SKILLS">\n`;
       html += `    <h2>COMPETÊNCIAS & TECNOLOGIAS</h2>\n`;
       html += `    <div class="skills-grid">\n`;
-      
-      const skillLines = sections[skillsKey].split('\n').map(l => l.trim()).filter(Boolean);
-      let currentCat = 'Competências Gerais';
-      let catItems = [];
 
-      const flushCategory = () => {
-        if (catItems.length > 0) {
-          html += `      <div class="skill-category" data-category="${currentCat}">\n`;
-          html += `        <h3>${currentCat}</h3>\n`;
-          html += `        <ul class="skills-list">\n`;
-          for (const item of catItems) {
-            html += `          <li>${item}</li>\n`;
-          }
-          html += `        </ul>\n`;
-          html += `      </div>\n`;
-          catItems = [];
+      const SkillsParser = require('../parsers/SkillsParser');
+      const parsedSkills = SkillsParser.parseSkills(sections.skills);
+
+      for (const cat of parsedSkills) {
+        html += `      <div class="skill-category" data-category="${cat.category}">\n`;
+        html += `        <h3>${cat.category}</h3>\n`;
+        html += `        <ul class="skills-list">\n`;
+        for (const item of cat.items) {
+          html += `          <li>${item}</li>\n`;
         }
-      };
-
-      const categoryHeaderRegex = /^(LINGUAGENS|FRAMEWORKS|BANCOS DE DADOS|DEVOPS|PROTOCOLOS|METODOLOGIAS|OUTROS|FERRAMENTAS|TESTES|CLOUD|BIBLIOTECAS)/i;
-
-      const multiWordPhrases = [
-        'Clean Code & SOLID Principles', 'Clean Code', 'SOLID Principles',
-        'Arquitetura de Software', 'Headless Browser Management', 'Internacionalização (i18n)',
-        'Metodologias Ágeis (Scrum)', 'Metodologias Ágeis', 'Tailwind CSS',
-        'Oracle SQL', 'SQL Server', 'Docker Compose', 'APIs REST'
-      ];
-
-      for (const sLine of skillLines) {
-        if (categoryHeaderRegex.test(sLine) || (sLine === sLine.toUpperCase() && sLine.length < 35 && !sLine.includes(','))) {
-          flushCategory();
-          currentCat = sLine.replace(/[:\-]/g, '').trim();
-        } else {
-          let working = sLine;
-          // Extract multi-word phrases first
-          for (const phrase of multiWordPhrases) {
-            const idx = working.toLowerCase().indexOf(phrase.toLowerCase());
-            if (idx !== -1) {
-              catItems.push(phrase);
-              working = working.slice(0, idx) + ' ' + working.slice(idx + phrase.length);
-            }
-          }
-          // Split remaining single tokens
-          const parts = working.split(/[,•|·/\n]/);
-          for (const p of parts) {
-            const trimmed = p.trim();
-            if (!trimmed) continue;
-            if (!trimmed.includes('&') && !trimmed.includes('(')) {
-              const tokens = trimmed.split(/\s+/).filter(Boolean);
-              for (const tok of tokens) {
-                if (tok.length > 0 && !catItems.includes(tok)) catItems.push(tok);
-              }
-            } else if (!catItems.includes(trimmed)) {
-              catItems.push(trimmed);
-            }
-          }
-        }
+        html += `        </ul>\n`;
+        html += `      </div>\n`;
       }
-      flushCategory();
       html += `    </div>\n`;
       html += `  </section>\n\n`;
     }
 
     // EXPERIENCE SECTION
-    const expKey = Object.keys(sections).find(k => /EXPERIÊNCIA|HISTÓRICO|EXPERIENCE/i.test(k));
-    if (expKey && sections[expKey]) {
+    if (sections.experience) {
       html += `  <section class="resume-section" data-section="EXPERIENCE">\n`;
       html += `    <h2>HISTÓRICO PROFISSIONAL</h2>\n`;
       html += `    <div class="experience-list">\n`;
 
-      const expBlocks = sections[expKey].split(/\n(?=[A-Z0-9][A-Za-z0-9\s().\/-]{2,40}(?:\s+(?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez|\d{4})|\n))/g);
+      const ExperienceParser = require('../parsers/ExperienceParser');
+      const parsedExps = ExperienceParser.parseExperiences(sections.experience);
 
-      for (const block of expBlocks) {
-        const bLines = block.split('\n').map(l => l.trim()).filter(Boolean);
-        if (bLines.length < 2) continue;
-
-        const firstLine = bLines[0];
-        const dateMatch = firstLine.match(/((?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez|\d{4})[^\n–—]*[–—\-]\s*(?:Presente|Atual|\d{4}|(?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez)[^\n]*))/i)
-          || (bLines[1] ? bLines[1].match(/((?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez|\d{4})[^\n–—]*[–—\-]\s*(?:Presente|Atual|\d{4}|(?:Jan|Fev|Mar|Abr|Mai|Jun|Jul|Ago|Set|Out|Nov|Dez)[^\n]*))/i) : null);
-
-        const period = dateMatch ? dateMatch[0].trim() : 'Período Recente';
-        const company = firstLine.replace(period, '').replace(/[–—\-]/g, '').trim() || 'Empresa';
-        const position = bLines[1] && !bLines[1].startsWith('•') && !bLines[1].startsWith('-') ? bLines[1].replace(/^[–—\-•\s]+/, '').trim() : 'Desenvolvedor';
-
-        const bullets = [];
-        const startIndex = (bLines[1] === position) ? 2 : 1;
-
-        for (let i = startIndex; i < bLines.length; i++) {
-          const bl = bLines[i].replace(/^[•\-\*]\s*/, '').trim();
-          if (bl.length > 8) {
-            bullets.push(bl);
-          }
-        }
-
-        html += `      <div class="experience-item" data-company="${company}">\n`;
-        html += `        <h3 class="company-name">${company}</h3>\n`;
-        html += `        <span class="period">${period}</span>\n`;
-        html += `        <p class="role-title">${position}</p>\n`;
+      for (const exp of parsedExps) {
+        html += `      <div class="experience-item" data-company="${exp.company}">\n`;
+        html += `        <h3 class="company-name">${exp.company}</h3>\n`;
+        html += `        <span class="period">${exp.period || 'Período Recente'}</span>\n`;
+        html += `        <p class="role-title">${exp.position || 'Profissional'}</p>\n`;
         html += `        <ul class="achievements">\n`;
-        for (const b of bullets) {
+        for (const b of exp.bullets) {
           html += `          <li>${b}</li>\n`;
         }
         html += `        </ul>\n`;
@@ -683,29 +603,20 @@ class DocumentParserService {
     }
 
     // EDUCATION SECTION
-    const eduKey = Object.keys(sections).find(k => /FORMAÇÃO|EDUCAÇÃO|EDUCATION/i.test(k));
-    if (eduKey && sections[eduKey]) {
+    if (sections.education) {
       html += `  <section class="resume-section" data-section="EDUCATION">\n`;
       html += `    <h2>FORMAÇÃO ACADÊMICA</h2>\n`;
       html += `    <div class="education-list">\n`;
 
-      const eduBlocks = sections[eduKey].split(/\n(?=[A-Z0-9][A-Za-z0-9\s().\/-]{2,40}(?:\s+(?:Concluído|Previsão|\d{4})|\n))/g);
+      const EducationParser = require('../parsers/EducationParser');
+      const parsedEdus = EducationParser.parseEducation(sections.education);
 
-      for (const block of eduBlocks) {
-        const bLines = block.split('\n').map(l => l.trim()).filter(Boolean);
-        if (bLines.length < 2) continue;
-
-        const org = bLines[0].replace(/[–—\-]/g, '').trim();
-        const degree = bLines[1] || 'Graduação';
-        const dateMatch = (bLines[0] + ' ' + (bLines[1] || '')).match(/(Concluído em \d{4}|Previsão de conclusão em \d{4}|\d{4}\s*–\s*\d{4}|\d{4})/i);
-        const period = dateMatch ? dateMatch[0] : 'Formação';
-        const desc = bLines.slice(2).join(' ');
-
-        html += `      <div class="education-item" data-institution="${org}">\n`;
-        html += `        <h3 class="institution-name">${org}</h3>\n`;
-        html += `        <p class="degree-title">${degree}</p>\n`;
-        html += `        <span class="period">${period}</span>\n`;
-        if (desc) html += `        <p class="education-description">${desc}</p>\n`;
+      for (const edu of parsedEdus) {
+        html += `      <div class="education-item" data-institution="${edu.institution}">\n`;
+        html += `        <h3 class="institution-name">${edu.institution}</h3>\n`;
+        html += `        <p class="degree-title">${edu.degree || 'Graduação'}</p>\n`;
+        html += `        <span class="period">${edu.period || 'Formação'}</span>\n`;
+        if (edu.description) html += `        <p class="education-description">${edu.description}</p>\n`;
         html += `      </div>\n`;
       }
 
@@ -714,27 +625,20 @@ class DocumentParserService {
     }
 
     // PROJECTS SECTION
-    const projKey = Object.keys(sections).find(k => /PROJETOS|PROJECTS/i.test(k));
-    if (projKey && sections[projKey]) {
+    if (sections.projects) {
       html += `  <section class="resume-section" data-section="PROJECTS">\n`;
       html += `    <h2>PROJETOS PESSOAIS</h2>\n`;
       html += `    <div class="projects-list">\n`;
 
-      const projBlocks = sections[projKey].split(/\n(?=[A-Z0-9][A-Za-z0-9\s().\/-]{2,40}\n)/g);
+      const ProjectParser = require('../parsers/ProjectParser');
+      const parsedProjs = ProjectParser.parseProjects(sections.projects);
 
-      for (const block of projBlocks) {
-        const bLines = block.split('\n').map(l => l.trim()).filter(Boolean);
-        if (bLines.length < 2) continue;
-
-        const title = bLines[0];
-        const stack = bLines[1];
-        const bullets = bLines.slice(2).map(b => b.replace(/^[•\-\*]\s*/, '').trim()).filter(b => b.length > 5);
-
-        html += `      <div class="project-item" data-title="${title}">\n`;
-        html += `        <h3 class="project-title">${title}</h3>\n`;
-        html += `        <p class="project-stack">${stack}</p>\n`;
+      for (const proj of parsedProjs) {
+        html += `      <div class="project-item" data-title="${proj.name}">\n`;
+        html += `        <h3 class="project-title">${proj.name}</h3>\n`;
+        if (proj.description) html += `        <p class="project-stack">${proj.description}</p>\n`;
         html += `        <ul class="project-bullets">\n`;
-        for (const b of bullets) {
+        for (const b of proj.bullets) {
           html += `          <li>${b}</li>\n`;
         }
         html += `        </ul>\n`;
@@ -758,11 +662,18 @@ class DocumentParserService {
     const lines = text.split('\n');
     const normalizedLines = [];
 
+    let isSectionHeaderSeen = false;
+
     for (let i = 0; i < lines.length; i++) {
       const current = lines[i].trim();
       if (!current) {
         normalizedLines.push('');
         continue;
+      }
+
+      const isCurrentSectionHeader = /^(RESUMO|SUMMARY|PERFIL|COMPETÊNCIAS|SKILLS|HISTÓRICO|EXPERIÊNCIA|EXPERIENCE|FORMAÇÃO|EDUCATION|PROJETOS|PROJECTS)/i.test(current);
+      if (isCurrentSectionHeader) {
+        isSectionHeaderSeen = true;
       }
 
       if (normalizedLines.length === 0) {
@@ -774,11 +685,11 @@ class DocumentParserService {
       const prev = normalizedLines[prevIndex];
 
       const isPrevSectionHeader = /^(RESUMO|SUMMARY|PERFIL|COMPETÊNCIAS|SKILLS|HISTÓRICO|EXPERIÊNCIA|EXPERIENCE|FORMAÇÃO|EDUCATION|PROJETOS|PROJECTS)/i.test(prev);
-      const isCurrentSectionHeader = /^(RESUMO|SUMMARY|PERFIL|COMPETÊNCIAS|SKILLS|HISTÓRICO|EXPERIÊNCIA|EXPERIENCE|FORMAÇÃO|EDUCATION|PROJETOS|PROJECTS)/i.test(current);
       const isBullet = /^[•\-\*\d+\.]\s/.test(current);
       const prevEndsWithTerminator = /[.:!?]$/.test(prev);
+      const isPrevShortTitle = prev.length < 40 && (prev === prev.toUpperCase() || /^[A-ZÀ-ÖØ-ß\s&/\\()\-]{3,35}$/.test(prev)) && !prev.includes(',');
 
-      if (!isPrevSectionHeader && !isCurrentSectionHeader && !isBullet && !prevEndsWithTerminator && prev.length > 0 && current.length > 0) {
+      if (isSectionHeaderSeen && !isPrevSectionHeader && !isCurrentSectionHeader && !isBullet && !isPrevShortTitle && !prevEndsWithTerminator && prev.length > 0 && current.length > 0) {
         normalizedLines[prevIndex] = prev + ' ' + current;
       } else {
         normalizedLines.push(current);

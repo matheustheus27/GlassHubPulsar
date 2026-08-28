@@ -6,12 +6,12 @@ async function runPdfPaginationTests() {
 
   const mockResume = {
     personalDetails: {
-      name: 'Matheus Thiago de Souza Ferreira',
-      title: 'Desenvolvedor de Software',
-      location: 'Ribeirão das Neves, MG',
+      name: 'Alexandre Silva dos Santos',
+      title: 'Desenvolvedor de Software Senior',
+      location: 'São Paulo, SP',
       contact: {
-        email: { email: 'matheustheus27@gmail.com' },
-        phone: { phone: '+55 (31) 99150-4604' }
+        email: { email: 'alexandre.silva@example.com' },
+        phone: { phone: '+55 (11) 98765-4321' }
       }
     },
     summaryDetails: {
@@ -29,13 +29,13 @@ async function runPdfPaginationTests() {
       experienceTitle: 'HISTÓRICO PROFISSIONAL',
       experiences: [
         {
-          company: 'Teknisa',
+          company: 'Empresa Alpha Tech',
           position: 'Desenvolvedor Full-Stack',
           period: 'Set 2025 - Presente',
           bullets: ['Liderança técnica na equipe de Integrações do Retail.', 'Desenvolvimento de APIs REST em Laravel e Slim.']
         },
         {
-          company: 'Azapfy',
+          company: 'Empresa Beta Soft',
           position: 'Desenvolvedor Back-end',
           period: 'Out 2021 - Set 2024',
           bullets: ['Manutenção e evolução de microserviços em PHP.', 'Otimização de rotinas SQL Server e Oracle SQL.']
@@ -46,7 +46,7 @@ async function runPdfPaginationTests() {
       educationTitle: 'FORMAÇÃO ACADÊMICA',
       educations: [
         {
-          organization: 'CEFET-MG',
+          organization: 'Universidade de Tecnologia',
           degree: 'Bacharelado em Engenharia de Computação',
           period: 'Concluído em 2021',
           description: 'Ênfase em redes e sistemas distribuídos.'
@@ -64,7 +64,7 @@ async function runPdfPaginationTests() {
 
   // Test 2: CSS Print Adjustments
   assert(html.includes('data-printable-section'), 'Must contain printable section containers');
-  assert(html.includes('MATHEUS THIAGO DE SOUZA FERREIRA'), 'Must include candidate name');
+  assert(html.includes('Alexandre Silva dos Santos'), 'Must include candidate name');
   console.log('✓ Test 2 Passed: HTML template includes CSS print rules and candidate vector data.');
 
   console.log('\n🎉 ALL PDF PAGINATION TESTS PASSED SUCCESSFULLY!');

@@ -2,7 +2,12 @@
  * PDF Worker
  * Handles background PDF rendering for user resumes and generates Hybrid Executive System Status Reports.
  */
-const puppeteer = require('puppeteer');
+let puppeteer = null;
+try {
+  puppeteer = require('puppeteer');
+} catch (e) {
+  // Graceful fallback for non-browser environments
+}
 const fs = require('fs');
 const logger = require('../utils/logger');
 const queueManager = require('../queues/queueManager');

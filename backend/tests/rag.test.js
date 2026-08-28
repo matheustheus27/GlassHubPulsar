@@ -6,7 +6,7 @@ async function runRAGTests() {
 
   const userId = 'user_test_rag_123';
   const rawText = `
-MATHEUS THIAGO DE SOUZA FERREIRA
+ALEXANDRE SILVA DOS SANTOS
 DESENVOLVEDOR DE SOFTWARE
 
 RESUMO PROFISSIONAL
@@ -23,7 +23,7 @@ Desenvolvedor de Software - Empresa Games & Tech
 Desenvolvimento de aplicações interativas em C# e Unity, integração de redes locais e servidores Linux/Windows. Automação de tarefas com scripts Bash e Python.
 
 FORMAÇÃO ACADÊMICA
-Engenharia de Computação - CEFET-MG (Concluído em 2021)
+Engenharia de Computação - Universidade de Tecnologia (Concluído em 2021)
 Foco em redes de computadores, inteligência artificial e otimização de algoritmos.
   `;
 
@@ -35,7 +35,7 @@ Foco em redes de computadores, inteligência artificial e otimização de algori
   console.log(`✓ Test 1 Passed: Document indexed into ${stats.totalChunks} semantic chunks.`);
 
   // Test 2: Semantic Vector Query Retrieval
-  const queryText = 'Quais bancos de dados o Matheus utilizou na empresa Retail?';
+  const queryText = 'Quais bancos de dados o Alexandre utilizou na empresa Retail?';
   const retrievedChunks = await RAGService.queryRelevantContext(userId, queryText, 2);
 
   assert(retrievedChunks.length > 0, 'Must retrieve relevant context chunks');

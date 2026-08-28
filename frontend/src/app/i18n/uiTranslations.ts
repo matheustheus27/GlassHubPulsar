@@ -96,6 +96,8 @@ export const uiTranslations = {
     phFacebook: 'https://facebook.com/usuario',
     labelTwitter: 'X (Antigo Twitter) URL',
     phTwitter: 'https://x.com/usuario',
+    labelX: 'X (Antigo Twitter) URL',
+    phX: 'https://x.com/usuario',
 
     summaryHeading: 'Resumo Profissional',
     phSummary: 'Descreva seu perfil, especializações e principais conquistas...',
@@ -267,6 +269,8 @@ export const uiTranslations = {
     phFacebook: 'https://facebook.com/username',
     labelTwitter: 'X (Twitter) URL',
     phTwitter: 'https://x.com/username',
+    labelX: 'X (Twitter) URL',
+    phX: 'https://x.com/username',
 
     summaryHeading: 'Executive Summary',
     phSummary: 'Describe your expertise, track record, and key achievements...',

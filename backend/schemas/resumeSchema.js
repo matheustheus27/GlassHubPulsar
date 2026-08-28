@@ -15,9 +15,13 @@ const RESUME_JSON_SCHEMA = {
         email: { type: "string" },
         phone: { type: "string" },
         linkedin: { type: "string" },
-        github: { type: "string" }
+        github: { type: "string" },
+        x: { type: "string" },
+        instagram: { type: "string" },
+        facebook: { type: "string" },
+        portfolio: { type: "string" }
       },
-      required: ["name", "title", "location", "email", "phone", "linkedin", "github"]
+      required: ["name", "title", "location", "email", "phone"]
     },
     professionalSummary: { type: "string" },
     skills: {
@@ -40,9 +44,9 @@ const RESUME_JSON_SCHEMA = {
           position: { type: "string" },
           period: { type: "string" },
           generalDescription: { type: "string" },
-          achievements: { type: "array", items: { type: "string" } }
+          bullets: { type: "array", items: { type: "string" } }
         },
-        required: ["company", "position", "period", "generalDescription", "achievements"]
+        required: ["company", "position", "period", "bullets"]
       }
     },
     education: {
@@ -52,11 +56,10 @@ const RESUME_JSON_SCHEMA = {
         properties: {
           institution: { type: "string" },
           degree: { type: "string" },
-          fieldOfStudy: { type: "string" },
-          statusOrPeriod: { type: "string" },
-          details: { type: "string" }
+          period: { type: "string" },
+          description: { type: "string" }
         },
-        required: ["institution", "degree", "fieldOfStudy", "statusOrPeriod", "details"]
+        required: ["institution", "degree", "period", "description"]
       }
     },
     projects: {
@@ -65,11 +68,10 @@ const RESUME_JSON_SCHEMA = {
         type: "object",
         properties: {
           name: { type: "string" },
-          technologies: { type: "array", items: { type: "string" } },
           description: { type: "string" },
-          achievements: { type: "array", items: { type: "string" } }
+          bullets: { type: "array", items: { type: "string" } }
         },
-        required: ["name", "technologies", "description", "achievements"]
+        required: ["name", "description", "bullets"]
       }
     }
   },
@@ -105,33 +107,51 @@ function validateAndCleanResumeData(rawJson) {
       phone: cleanString(candidate.phone),
       linkedin: cleanString(candidate.linkedin),
       github: cleanString(candidate.github),
-      x: cleanString(candidate.x),
+      x: cleanString(candidate.x || candidate.twitter),
       instagram: cleanString(candidate.instagram),
       facebook: cleanString(candidate.facebook),
       portfolio: cleanString(candidate.portfolio)
     },
     professionalSummary: cleanString(data.professionalSummary),
     skills: cleanedSkills,
-    experiences: Array.isArray(data.experiences) ? data.experiences.map(exp => ({
-      company: cleanString(exp.company),
-      position: cleanString(exp.position),
-      period: cleanString(exp.period),
-      generalDescription: cleanString(exp.generalDescription),
-      achievements: cleanArray(exp.achievements)
-    })).filter(exp => exp.company || exp.position) : [],
+    experiences: Array.isArray(data.experiences) ? data.experiences.map(exp => {
+      const company = cleanString(exp.company);
+      const position = cleanString(exp.position);
+      const period = cleanString(exp.period);
+      let generalDescription = cleanString(exp.generalDescription);
+      if (generalDescription && generalDescription.toLowerCase() === position.toLowerCase()) {
+        generalDescription = '';
+      }
+      return {
+        company,
+        position,
+        period,
+        generalDescription,
+        bullets: cleanArray(exp.bullets || exp.achievements || exp.realizacoes)
+      };
+    }).filter(exp => exp.company || exp.position) : [],
     education: Array.isArray(data.education) ? data.education.map(edu => ({
-      institution: cleanString(edu.institution),
-      degree: cleanString(edu.degree),
-      fieldOfStudy: cleanString(edu.fieldOfStudy),
-      statusOrPeriod: cleanString(edu.statusOrPeriod),
-      details: cleanString(edu.details)
-    })).filter(edu => edu.institution || edu.degree || edu.fieldOfStudy) : [],
-    projects: Array.isArray(data.projects) ? data.projects.map(proj => ({
-      name: cleanString(proj.name),
-      technologies: cleanArray(proj.technologies),
-      description: cleanString(proj.description),
-      achievements: cleanArray(proj.achievements)
-    })).filter(proj => proj.name) : []
+      institution: cleanString(edu.institution || edu.instituicao),
+      degree: cleanString(edu.degree || edu.grau),
+      period: cleanString(edu.period || edu.statusOrPeriod || edu.statusOuPeriodo),
+      description: cleanString(edu.description || edu.details || edu.detalhes)
+    })).filter(edu => edu.institution || edu.degree) : [],
+    projects: Array.isArray(data.projects) ? data.projects.map(proj => {
+      const name = cleanString(proj.name || proj.nome);
+      let description = cleanString(proj.description || (Array.isArray(proj.technologies) ? proj.technologies.join(', ') : ''));
+      let bullets = cleanArray(proj.bullets || proj.achievements || proj.realizacoes);
+
+      // Safeguard: If bullets is empty but description has text, ensure bullets gets populated
+      if (bullets.length === 0 && description) {
+        bullets = [description];
+      }
+
+      return {
+        name,
+        description,
+        bullets
+      };
+    }).filter(proj => proj.name) : []
   };
 }
 
@@ -187,16 +207,17 @@ function normalizeToApplicationDTO(structuredSchema, targetLanguage = 'pt-BR') {
         company: exp.company,
         position: exp.position,
         period: exp.period,
-        bullets: exp.achievements.length > 0 ? exp.achievements : (exp.generalDescription ? [exp.generalDescription] : [])
+        generalDescription: exp.generalDescription,
+        bullets: exp.bullets.length > 0 ? exp.bullets : (exp.generalDescription ? [exp.generalDescription] : [])
       }))
     },
     educationDetails: {
       educationTitle: titles.education,
       educations: schema.education.map(edu => ({
         organization: edu.institution,
-        degree: [edu.degree, edu.fieldOfStudy].filter(Boolean).join(" - "),
-        period: edu.statusOrPeriod,
-        description: edu.details
+        degree: edu.degree,
+        period: edu.period,
+        description: edu.description
       }))
     },
     projectDetails: {
@@ -204,8 +225,8 @@ function normalizeToApplicationDTO(structuredSchema, targetLanguage = 'pt-BR') {
       projects: schema.projects.map(proj => ({
         title: proj.name,
         link: "",
-        description: proj.description || (proj.technologies.length > 0 ? `${isPt ? 'Tecnologias' : 'Technologies'}: ${proj.technologies.join(', ')}` : ''),
-        bullets: proj.achievements.length > 0 ? proj.achievements : (proj.description ? [proj.description] : [])
+        description: proj.description,
+        bullets: proj.bullets.length > 0 ? proj.bullets : (proj.description ? [proj.description] : [])
       }))
     }
   };

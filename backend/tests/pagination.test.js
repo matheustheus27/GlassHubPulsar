@@ -29,18 +29,18 @@ async function runPaginationAndVisualTests() {
     return `${namePart}-${cleanLang}.pdf`;
   }
 
-  assert.strictEqual(formatPdfFileName("Matheus Thiago de Souza Ferreira", "pt-BR"), "MATHEUS_FERREIRA-pt-BR.pdf");
-  assert.strictEqual(formatPdfFileName("Matheus Ferreira", "en-US"), "MATHEUS_FERREIRA-en-US.pdf");
+  assert.strictEqual(formatPdfFileName("Alexandre Silva dos Santos", "pt-BR"), "ALEXANDRE_SANTOS-pt-BR.pdf");
+  assert.strictEqual(formatPdfFileName("Alexandre Santos", "en-US"), "ALEXANDRE_SANTOS-en-US.pdf");
   assert.strictEqual(formatPdfFileName("John Doe", "es-ES"), "JOHN_DOE-es-ES.pdf");
   assert.strictEqual(formatPdfFileName("Ana", "pt-BR"), "ANA-pt-BR.pdf");
   console.log('✅ Test 1 Passed: PDF filename formatted as NAME_LASTNAME-LANG.pdf');
 
   // --- TEST 2: Vector SVGs for Facebook, X, Instagram, LinkedIn, GitHub ---
-  const facebookSvg = ContactLinkOptimizer.getSvgIcon({ title: 'Facebook', link: 'https://facebook.com/matheus', icon: '🔗' });
-  const xSvg = ContactLinkOptimizer.getSvgIcon({ title: 'X', link: 'https://x.com/matheus', icon: '𝕏' });
-  const instagramSvg = ContactLinkOptimizer.getSvgIcon({ title: 'Instagram', link: 'https://instagram.com/matheus', icon: '📸' });
-  const linkedinSvg = ContactLinkOptimizer.getSvgIcon({ title: 'LinkedIn', link: 'https://linkedin.com/in/matheus', icon: '💼' });
-  const githubSvg = ContactLinkOptimizer.getSvgIcon({ title: 'GitHub', link: 'https://github.com/matheus', icon: '🐙' });
+  const facebookSvg = ContactLinkOptimizer.getSvgIcon({ title: 'Facebook', link: 'https://facebook.com/alexandre-dev', icon: '🔗' });
+  const xSvg = ContactLinkOptimizer.getSvgIcon({ title: 'X', link: 'https://x.com/alexandre-dev', icon: '𝕏' });
+  const instagramSvg = ContactLinkOptimizer.getSvgIcon({ title: 'Instagram', link: 'https://instagram.com/alexandre-dev', icon: '📸' });
+  const linkedinSvg = ContactLinkOptimizer.getSvgIcon({ title: 'LinkedIn', link: 'https://linkedin.com/in/alexandre-dev', icon: '💼' });
+  const githubSvg = ContactLinkOptimizer.getSvgIcon({ title: 'GitHub', link: 'https://github.com/alexandre-dev', icon: '🐙' });
 
   assert(facebookSvg.includes('<svg') && facebookSvg.includes('viewBox="0 0 24 24"'), 'Must render Facebook SVG');
   assert(xSvg.includes('<svg') && xSvg.includes('viewBox="0 0 24 24"'), 'Must render X (Twitter) SVG');
@@ -52,25 +52,25 @@ async function runPaginationAndVisualTests() {
   // --- TEST 3: Pagination of Complete 9-Year Senior Resume (Must fit in 2 to 3 pages, NOT 7!) ---
   const fullCandidateResume = {
     personalDetails: {
-      name: "MATHEUS THIAGO DE SOUZA FERREIRA",
+      name: "ALEXANDRE SILVA DOS SANTOS",
       title: "DESENVOLVEDOR DE SOFTWARE",
-      location: { location: "Ribeirão das Neves, MG", icon: "📍" },
+      location: { location: "São Paulo, SP", icon: "📍" },
       contact: {
-        email: { email: "matheustheus27@gmail.com", icon: "✉️" },
-        phone: { phone: "+55 (31) 99150-4604", icon: "📞" },
+        email: { email: "alexandre.silva@example.com", icon: "✉️" },
+        phone: { phone: "+55 (11) 98765-4321", icon: "📞" },
         networking: {
-          portfolio: { name: "Portfólio", url: "https://matheus.dev", icon: "🌐" },
-          linkedin: { name: "LinkedIn", url: "https://linkedin.com/in/matheustheus27", icon: "💼" },
-          github: { name: "GitHub", url: "https://github.com/matheustheus27", icon: "🐙" },
-          x: { name: "X", url: "https://x.com/matheustheus27", icon: "𝕏" },
-          instagram: { name: "Instagram", url: "https://instagram.com/matheustheus27", icon: "📸" },
-          facebook: { name: "Facebook", url: "https://facebook.com/matheustheus27", icon: "📘" }
+          portfolio: { name: "Portfólio", url: "https://alexandre-dev.com", icon: "🌐" },
+          linkedin: { name: "LinkedIn", url: "https://linkedin.com/in/alexandre-dev", icon: "💼" },
+          github: { name: "GitHub", url: "https://github.com/alexandre-dev", icon: "🐙" },
+          x: { name: "X", url: "https://x.com/alexandre_dev", icon: "𝕏" },
+          instagram: { name: "Instagram", url: "https://instagram.com/alexandre_dev", icon: "📸" },
+          facebook: { name: "Facebook", url: "https://facebook.com/alexandre_dev", icon: "📘" }
         }
       }
     },
     summaryDetails: {
       summaryTitle: "RESUMO PROFISSIONAL",
-      summary: "Desenvolvedor de Software com 9 anos de experiência no setor de tecnologia, sendo 7 dedicados ativamente à engenharia de back-end, desenvolvimento full-stack e arquitetura de sistemas escaláveis. Especialista na construção de APIs REST robustas, integração de sistemas complexos e criação de pipelines de dados assíncronos de alta performance. Possui sólida vivência no desenvolvimento de soluções voltadas para ecossistemas de alta concorrência, como Varejo, Logística e Foodservice. Domínio técnico avançado em PHP e Python, atuando com microsserviços, fluxos baseados em webhooks, arquiteturas orientadas a eventos e otimização de bancos de dados de grande porte (relacionais e NoSQL). Forte fundamentação teórica e prática em Engenharia de Computação pelo CEFET-MG."
+      summary: "Desenvolvedor de Software com 9 anos de experiência no setor de tecnologia, sendo 7 dedicados ativamente à engenharia de back-end, desenvolvimento full-stack e arquitetura de sistemas escaláveis. Especialista na construção de APIs REST robustas, integração de sistemas complexos e criação de pipelines de dados assíncronos de alta performance. Possui sólida vivência no desenvolvimento de soluções voltadas para ecossistemas de alta concorrência, como Varejo, Logística e Foodservice. Domínio técnico avançado em PHP e Python, atuando com microsserviços, fluxos baseados em webhooks, arquiteturas orientadas a eventos e otimização de bancos de dados de grande porte (relacionais e NoSQL)."
     },
     skillsDetails: {
       skillsTitle: "COMPETÊNCIAS & TECNOLOGIAS",
@@ -87,7 +87,7 @@ async function runPaginationAndVisualTests() {
       experienceTitle: "HISTÓRICO PROFISSIONAL",
       experiences: [
         {
-          company: "Teknisa",
+          company: "Empresa Alpha Tech",
           period: "Set 2025 - Presente",
           role: "Desenvolvedor Full-Stack",
           bullets: [
@@ -98,7 +98,7 @@ async function runPaginationAndVisualTests() {
           ]
         },
         {
-          company: "Azapfy",
+          company: "Empresa Beta Soft",
           period: "Out 2021 - Set 2024",
           role: "Desenvolvedor Back-end",
           bullets: [
@@ -110,16 +110,16 @@ async function runPaginationAndVisualTests() {
           ]
         },
         {
-          company: "Commit Jr. (Empresa Júnior de Engenharia de Computação do CEFET-MG)",
+          company: "Empresa Gamma Games",
           period: "Fev 2021 - Fev 2023",
           role: "Desenvolvedor de Jogos",
           bullets: [
-            "Liderança técnica e desenvolvimento integral do jogo completo 'Bubble' utilizando C# e a engine Unity, gerenciando o ciclo de vida completo do produto.",
+            "Liderança técnica e desenvolvimento integral de jogo interativo utilizando C# e a engine Unity, gerenciando o ciclo de vida completo do produto.",
             "Coordenação da equipe no planejamento estratégico e divisão de sprints. Responsável pela concepção e redação do GDD (Game Design Document), definindo toda a arquitetura de mecânicas, física e design de níveis do jogo."
           ]
         },
         {
-          company: "Núcleo de Tecnologia da Informação e Comunicação (NTIC - CEFET-MG)",
+          company: "Centro de Tecnologia e Inovação",
           period: "Nov 2019 - Nov 2020",
           role: "Especialista de TI",
           bullets: [
@@ -128,7 +128,7 @@ async function runPaginationAndVisualTests() {
           ]
         },
         {
-          company: "Sistema Divina Providência",
+          company: "Instituto de Formação Técnica",
           period: "Mar 2017 - Fev 2019",
           role: "Instrutor de Informática",
           bullets: [
@@ -143,13 +143,13 @@ async function runPaginationAndVisualTests() {
       educationTitle: "FORMAÇÃO ACADÊMICA",
       educations: [
         {
-          organization: "CEFET-MG",
+          organization: "Universidade de Tecnologia",
           degree: "Bacharelado em Engenharia de Computação",
           period: "Previsão de conclusão em 2028",
           description: "Graduação em Engenharia de Computação. Formação teórica e prática aprofundada englobando Teoria da Computação (Linguagens Formais e Autômatos), Compiladores, Engenharia de Software, Arquitetura de Sistemas e Sistemas Embarcados. Desenvolvimento de projetos de pesquisa focados em IHC (Interação Humano-Computador) e Tecnologia HInt (Human-Computer Integration) do Tipo Fusão, com aplicações práticas de Realidade Aumentada aplicadas a manutenções preditivas em maquinários industriais."
         },
         {
-          organization: "Sistema Divina Providência",
+          organization: "Escola Técnica Estadual",
           degree: "Técnico em Informática",
           period: "Concluído em 2015",
           description: "Ensino Médio Integrado ao Técnico em Informática. Formação técnica de excelência com forte participação em projetos práticos integradores de software e infraestrutura. Domínio profundo em lógica algorítmica, estruturas de dados fundamentais, topologia e arquitetura de redes de computadores, montagem/manutenção preventiva de hardware e modelagem conceitual, lógica e física de bancos de dados relacionais."
@@ -183,7 +183,7 @@ async function runPaginationAndVisualTests() {
         },
         {
           title: "DocShell - Intelligent Documentation Framework",
-          link: "https://github.com/matheustheus27/docshell",
+          link: "https://github.com/alexandre-dev/docshell",
           description: "Python, PHP, JavaScript, Docker, Semantic Search & RAG, Multi-runtime Engines",
           bullets: [
             "Suporte nativo a múltiplos ambientes de execução como Python, PHP e JavaScript. Permite a geração unificada de documentação técnica independente da linguagem do projeto.",
@@ -201,12 +201,12 @@ async function runPaginationAndVisualTests() {
 
   console.log(`\n📄 Generated PDF Page Count: ${totalPages} pages (Target: 3 pages)`);
   assert(totalPages >= 2 && totalPages <= 3, `Full resume must paginate in 2 or 3 pages without fracturing into 7 pages! Found: ${totalPages}`);
-  assert(html.includes('MATHEUS THIAGO DE SOUZA FERREIRA'), 'Must include candidate name');
+  assert(html.includes('ALEXANDRE SILVA DOS SANTOS'), 'Must include candidate name');
   assert(html.includes('svg-icon'), 'Must include vector SVG icons');
   assert(html.includes('fonts.googleapis.com'), 'Must include Google Fonts links');
   assert(!html.includes('(Continuação)'), 'Must NOT include (Continuação) tag in continuing sections');
   assert(!html.includes('(Continued)'), 'Must NOT include (Continued) tag');
-  assert(html.includes('matheus.dev') || html.includes('Portfólio') || html.includes('favicon'), 'Must resolve portfolio domain name or favicon');
+  assert(html.includes('alexandre-dev.com') || html.includes('Portfólio') || html.includes('favicon'), 'Must resolve portfolio domain name or favicon');
 
   console.log('✅ Test 3 Passed: Complete resume fits into exactly 3 rich, balanced pages with clean section titles (no Continuação tag) and favicon/domain support.');
   console.log('\n🎉 ALL TESTS PASSED SUCCESSFULLY!\n');

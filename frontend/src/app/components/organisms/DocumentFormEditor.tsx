@@ -46,7 +46,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
     const mapsLink = locationText.trim()
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationText.trim())}`
       : 'https://maps.google.com';
-    
+
     onChange({
       ...documentData,
       personalDetails: {
@@ -427,11 +427,10 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                   key={s.id}
                   type="button"
                   onClick={() => setSection(s.id as any)}
-                  className={`min-h-[36px] px-3 py-1 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer ${
-                    section === s.id
+                  className={`min-h-[36px] px-3 py-1 rounded-xl text-xs md:text-sm font-bold transition cursor-pointer ${section === s.id
                       ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
                       : 'bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800'
-                  }`}
+                    }`}
                 >
                   {s.label}
                 </button>
@@ -618,10 +617,10 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                 </span>
                 <input
                   type="text"
-                  value={(net.twitter?.url || '').replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, '')}
+                  value={(net.x?.url || net.twitter?.url || '').replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, '')}
                   onChange={e => {
                     const uname = e.target.value.trim().replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, '');
-                    updateNetworking('twitter', 'X', uname ? `https://x.com/${uname}` : '', '𝕏');
+                    updateNetworking('x', 'X', uname ? `https://x.com/${uname}` : '', '𝕏');
                   }}
                   placeholder="seu-usuario"
                   className="w-full px-3 py-2.5 bg-transparent text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none font-sans"

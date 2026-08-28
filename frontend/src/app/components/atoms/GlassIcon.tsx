@@ -7,6 +7,7 @@ export type GlassIconName =
   | 'portfolio'
   | 'linkedin'
   | 'github'
+  | 'x'
   | 'twitter'
   | 'instagram'
   | 'facebook'
@@ -100,6 +101,7 @@ export const GlassIcon: React.FC<GlassIconProps> = ({
           </svg>
         );
 
+      case 'x':
       case 'twitter':
       case '𝕏':
         return (
