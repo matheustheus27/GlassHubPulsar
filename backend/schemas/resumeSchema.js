@@ -6,213 +6,206 @@
 const RESUME_JSON_SCHEMA = {
   type: "object",
   properties: {
-    candidato: {
+    candidate: {
       type: "object",
       properties: {
-        nome: { type: "string" },
-        titulo: { type: "string" },
-        localizacao: { type: "string" },
+        name: { type: "string" },
+        title: { type: "string" },
+        location: { type: "string" },
         email: { type: "string" },
-        telefone: { type: "string" },
+        phone: { type: "string" },
         linkedin: { type: "string" },
         github: { type: "string" }
       },
-      required: ["nome", "titulo"]
+      required: ["name", "title", "location", "email", "phone", "linkedin", "github"]
     },
-    resumoProfissional: { type: "string" },
-    competencias: {
-      type: "object",
-      properties: {
-        linguagens: { type: "array", items: { type: "string" } },
-        frameworksBibliotecas: { type: "array", items: { type: "string" } },
-        bancosDeDados: { type: "array", items: { type: "string" } },
-        devops: { type: "array", items: { type: "string" } },
-        protocolosComunicacao: { type: "array", items: { type: "string" } },
-        metodologiasConceitos: { type: "array", items: { type: "string" } }
-      }
-    },
-    experiencias: {
+    professionalSummary: { type: "string" },
+    skills: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          empresa: { type: "string" },
-          cargo: { type: "string" },
-          periodo: { type: "string" },
-          descricaoGeral: { type: "string" },
-          realizacoes: { type: "array", items: { type: "string" } }
+          category: { type: "string" },
+          items: { type: "array", items: { type: "string" } }
         },
-        required: ["empresa", "cargo", "periodo", "realizacoes"]
+        required: ["category", "items"]
       }
     },
-    formacaoAcademica: {
+    experiences: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          instituicao: { type: "string" },
-          grau: { type: "string" },
-          curso: { type: "string" },
-          statusOuPeriodo: { type: "string" },
-          detalhes: { type: "string" }
+          company: { type: "string" },
+          position: { type: "string" },
+          period: { type: "string" },
+          generalDescription: { type: "string" },
+          achievements: { type: "array", items: { type: "string" } }
         },
-        required: ["instituicao", "grau", "statusOuPeriodo"]
+        required: ["company", "position", "period", "generalDescription", "achievements"]
       }
     },
-    projetos: {
+    education: {
       type: "array",
       items: {
         type: "object",
         properties: {
-          nome: { type: "string" },
-          tecnologias: { type: "array", items: { type: "string" } },
-          descricao: { type: "string" },
-          realizacoes: { type: "array", items: { type: "string" } }
+          institution: { type: "string" },
+          degree: { type: "string" },
+          fieldOfStudy: { type: "string" },
+          statusOrPeriod: { type: "string" },
+          details: { type: "string" }
         },
-        required: ["nome", "descricao"]
+        required: ["institution", "degree", "fieldOfStudy", "statusOrPeriod", "details"]
+      }
+    },
+    projects: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          technologies: { type: "array", items: { type: "string" } },
+          description: { type: "string" },
+          achievements: { type: "array", items: { type: "string" } }
+        },
+        required: ["name", "technologies", "description", "achievements"]
       }
     }
   },
-  required: ["candidato", "resumoProfissional", "competencias", "experiencias", "formacaoAcademica", "projetos"]
+  required: [
+    "candidate",
+    "professionalSummary",
+    "skills",
+    "experiences",
+    "education",
+    "projects"
+  ]
 };
 
-/**
- * Validates, cleans and ensures safe defaults for extracted resume data
- */
 function validateAndCleanResumeData(rawJson) {
   const data = typeof rawJson === 'object' && rawJson !== null ? rawJson : {};
-
-  const candidato = data.candidato || {};
-  const competencias = data.competencias || {};
+  const candidate = data.candidate || {};
 
   const cleanString = (str) => typeof str === 'string' ? str.trim() : '';
   const cleanArray = (arr) => Array.isArray(arr) ? arr.map(cleanString).filter(Boolean) : [];
 
-  const cleaned = {
-    candidato: {
-      nome: cleanString(candidato.nome),
-      titulo: cleanString(candidato.titulo),
-      localizacao: cleanString(candidato.localizacao),
-      email: cleanString(candidato.email),
-      telefone: cleanString(candidato.telefone),
-      linkedin: cleanString(candidato.linkedin),
-      github: cleanString(candidato.github)
-    },
-    resumoProfissional: cleanString(data.resumoProfissional),
-    competencias: {
-      linguagens: cleanArray(competencias.linguagens),
-      frameworksBibliotecas: cleanArray(competencias.frameworksBibliotecas),
-      bancosDeDados: cleanArray(competencias.bancosDeDados),
-      devops: cleanArray(competencias.devops),
-      protocolosComunicacao: cleanArray(competencias.protocolosComunicacao),
-      metodologiasConceitos: cleanArray(competencias.metodologiasConceitos)
-    },
-    experiencias: Array.isArray(data.experiencias) ? data.experiencias.map(exp => ({
-      empresa: cleanString(exp.empresa),
-      cargo: cleanString(exp.cargo),
-      periodo: cleanString(exp.periodo),
-      descricaoGeral: cleanString(exp.descricaoGeral),
-      realizacoes: cleanArray(exp.realizacoes)
-    })).filter(exp => exp.empresa || exp.cargo) : [],
-    formacaoAcademica: Array.isArray(data.formacaoAcademica) ? data.formacaoAcademica.map(edu => ({
-      instituicao: cleanString(edu.instituicao),
-      grau: cleanString(edu.grau),
-      curso: cleanString(edu.curso),
-      statusOuPeriodo: cleanString(edu.statusOuPeriodo),
-      detalhes: cleanString(edu.detalhes)
-    })).filter(edu => edu.instituicao || edu.grau || edu.curso) : [],
-    projetos: Array.isArray(data.projetos) ? data.projetos.map(proj => ({
-      nome: cleanString(proj.nome),
-      tecnologias: cleanArray(proj.tecnologias),
-      descricao: cleanString(proj.descricao),
-      realizacoes: cleanArray(proj.realizacoes)
-    })).filter(proj => proj.nome) : []
-  };
+  const rawSkills = Array.isArray(data.skills) ? data.skills : [];
+  const cleanedSkills = rawSkills.map(cat => ({
+    category: cleanString(cat.category) || 'Competências',
+    items: cleanArray(cat.items)
+  })).filter(cat => cat.items.length > 0);
 
-  return cleaned;
+  return {
+    candidate: {
+      name: cleanString(candidate.name),
+      title: cleanString(candidate.title),
+      location: cleanString(candidate.location),
+      email: cleanString(candidate.email),
+      phone: cleanString(candidate.phone),
+      linkedin: cleanString(candidate.linkedin),
+      github: cleanString(candidate.github),
+      x: cleanString(candidate.x),
+      instagram: cleanString(candidate.instagram),
+      facebook: cleanString(candidate.facebook),
+      portfolio: cleanString(candidate.portfolio)
+    },
+    professionalSummary: cleanString(data.professionalSummary),
+    skills: cleanedSkills,
+    experiences: Array.isArray(data.experiences) ? data.experiences.map(exp => ({
+      company: cleanString(exp.company),
+      position: cleanString(exp.position),
+      period: cleanString(exp.period),
+      generalDescription: cleanString(exp.generalDescription),
+      achievements: cleanArray(exp.achievements)
+    })).filter(exp => exp.company || exp.position) : [],
+    education: Array.isArray(data.education) ? data.education.map(edu => ({
+      institution: cleanString(edu.institution),
+      degree: cleanString(edu.degree),
+      fieldOfStudy: cleanString(edu.fieldOfStudy),
+      statusOrPeriod: cleanString(edu.statusOrPeriod),
+      details: cleanString(edu.details)
+    })).filter(edu => edu.institution || edu.degree || edu.fieldOfStudy) : [],
+    projects: Array.isArray(data.projects) ? data.projects.map(proj => ({
+      name: cleanString(proj.name),
+      technologies: cleanArray(proj.technologies),
+      description: cleanString(proj.description),
+      achievements: cleanArray(proj.achievements)
+    })).filter(proj => proj.name) : []
+  };
 }
 
-/**
- * Normalizes cleaned schema data into application frontend DTO state
- */
-function normalizeToApplicationDTO(structuredSchema) {
+function normalizeToApplicationDTO(structuredSchema, targetLanguage = 'pt-BR') {
   const schema = validateAndCleanResumeData(structuredSchema);
-  const cand = schema.candidato;
+  const cand = schema.candidate;
+  const isPt = targetLanguage.toLowerCase().startsWith('pt');
 
-  // Build skills category list
-  const skillsList = [];
-
-  if (schema.competencias.linguagens.length > 0) {
-    skillsList.push({ name: "Linguagens", items: schema.competencias.linguagens });
-  }
-  if (schema.competencias.frameworksBibliotecas.length > 0) {
-    skillsList.push({ name: "Frameworks & Bibliotecas", items: schema.competencias.frameworksBibliotecas });
-  }
-  if (schema.competencias.bancosDeDados.length > 0) {
-    skillsList.push({ name: "Bancos de Dados", items: schema.competencias.bancosDeDados });
-  }
-  if (schema.competencias.devops.length > 0) {
-    skillsList.push({ name: "DevOps & Cloud", items: schema.competencias.devops });
-  }
-  if (schema.competencias.protocolosComunicacao.length > 0) {
-    skillsList.push({ name: "Protocolos & Comunicação", items: schema.competencias.protocolosComunicacao });
-  }
-  if (schema.competencias.metodologiasConceitos.length > 0) {
-    skillsList.push({ name: "Metodologias & Conceitos", items: schema.competencias.metodologiasConceitos });
-  }
+  const titles = isPt ? {
+    summary: "RESUMO PROFISSIONAL",
+    skills: "COMPETÊNCIAS & TECNOLOGIAS",
+    experience: "HISTÓRICO PROFISSIONAL",
+    education: "FORMAÇÃO ACADÊMICA",
+    projects: "PROJETOS DE DESTAQUE"
+  } : {
+    summary: "PROFESSIONAL SUMMARY",
+    skills: "SKILLS & TECHNOLOGIES",
+    experience: "PROFESSIONAL EXPERIENCE",
+    education: "EDUCATION",
+    projects: "FEATURED PROJECTS"
+  };
 
   return {
     rawSchema: schema,
     personalDetails: {
-      name: cand.nome,
-      title: cand.titulo,
-      location: {
-        location: cand.localizacao,
-        link: "",
-        icon: "📍"
-      },
+      name: cand.name,
+      title: cand.title,
+      location: { location: cand.location, link: "" },
       contact: {
-        email: { email: cand.email, icon: "✉️" },
-        phone: { phone: cand.telefone, link: "", icon: "📞" },
+        email: { email: cand.email },
+        phone: { phone: cand.phone, link: cand.phone ? `https://wa.me/${cand.phone.replace(/\D/g, '')}` : '' },
         networking: {
-          linkedin: { name: "LinkedIn", url: cand.linkedin, icon: "💼" },
-          github: { name: "GitHub", url: cand.github, icon: "🐙" }
+          linkedin: { name: "LinkedIn", url: cand.linkedin || "" },
+          github: { name: "GitHub", url: cand.github || "" },
+          x: { name: "X", url: cand.x || "" },
+          instagram: { name: "Instagram", url: cand.instagram || "" },
+          facebook: { name: "Facebook", url: cand.facebook || "" },
+          portfolio: { name: "Portfolio", url: cand.portfolio || "" }
         }
       }
     },
     summaryDetails: {
-      summaryTitle: "RESUMO PROFISSIONAL",
-      summary: schema.resumoProfissional
+      summaryTitle: titles.summary,
+      summary: schema.professionalSummary
     },
     skillsDetails: {
-      skillsTitle: "COMPETÊNCIAS & TECNOLOGIAS",
-      skills: skillsList
+      skillsTitle: titles.skills,
+      skills: schema.skills.map(s => ({ name: s.category, items: s.items }))
     },
     experienceDetails: {
-      experienceTitle: "HISTÓRICO PROFISSIONAL",
-      experiences: schema.experiencias.map(exp => ({
-        company: exp.empresa,
-        position: exp.cargo,
-        period: exp.periodo,
-        bullets: exp.realizacoes.length > 0 ? exp.realizacoes : (exp.descricaoGeral ? [exp.descricaoGeral] : [])
+      experienceTitle: titles.experience,
+      experiences: schema.experiences.map(exp => ({
+        company: exp.company,
+        position: exp.position,
+        period: exp.period,
+        bullets: exp.achievements.length > 0 ? exp.achievements : (exp.generalDescription ? [exp.generalDescription] : [])
       }))
     },
     educationDetails: {
-      educationTitle: "FORMAÇÃO ACADÊMICA",
-      educations: schema.formacaoAcademica.map(edu => ({
-        organization: edu.instituicao,
-        degree: [edu.grau, edu.curso].filter(Boolean).join(" - "),
-        period: edu.statusOuPeriodo,
-        description: edu.detalhes
+      educationTitle: titles.education,
+      educations: schema.education.map(edu => ({
+        organization: edu.institution,
+        degree: [edu.degree, edu.fieldOfStudy].filter(Boolean).join(" - "),
+        period: edu.statusOrPeriod,
+        description: edu.details
       }))
     },
     projectDetails: {
-      projectTitle: "PROJETOS DE DESTAQUE",
-      projects: schema.projetos.map(proj => ({
-        title: proj.nome,
+      projectTitle: titles.projects,
+      projects: schema.projects.map(proj => ({
+        title: proj.name,
         link: "",
-        description: proj.descricao || (proj.tecnologias.length > 0 ? `Tecnologias: ${proj.tecnologias.join(', ')}` : ''),
-        bullets: proj.realizacoes
+        description: proj.description || (proj.technologies.length > 0 ? `${isPt ? 'Tecnologias' : 'Technologies'}: ${proj.technologies.join(', ')}` : ''),
+        bullets: proj.achievements.length > 0 ? proj.achievements : (proj.description ? [proj.description] : [])
       }))
     }
   };

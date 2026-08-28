@@ -135,12 +135,12 @@ class AIController {
         return res.status(400).json({ success: false, error: 'Texto bruto obrigatório para extração de dados.' });
       }
 
-      // Index in RAG Vector Store
-      try {
-        await RAGService.indexText(userId, rawText);
-      } catch (ragErr) {
-        logger.warn('[AIController] Error indexing quickFill text in RAG store:', ragErr.message);
-      }
+      // // Index in RAG Vector Store
+      // try {
+      //   await RAGService.indexText(userId, rawText);
+      // } catch (ragErr) {
+      //   logger.warn('[AIController] Error indexing quickFill text in RAG store:', ragErr.message);
+      // }
 
       const structuredResume = await ollamaService.parseResumeFromRawText(rawText);
 

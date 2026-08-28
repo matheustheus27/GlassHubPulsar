@@ -11,16 +11,9 @@ class OllamaService {
         if (!text || typeof text !== 'string') return '';
         return text
             .replace(/^%?PDF-[\d.]+/gi, '')
-            .replace(/\/Title\s*\([^\)]*\)/gi, '')
-            .replace(/\/Creator\s*\([^\)]*\)/gi, '')
-            .replace(/\/Producer\s*\([^\)]*\)/gi, '')
-            .replace(/\/CreationDate\s*\([^\)]*\)/gi, '')
-            .replace(/\/ModDate\s*\([^\)]*\)/gi, '')
-            .replace(/\/ca\s+[\d.]+/gi, '')
-            .replace(/\/BM\s+\/[A-Za-z]+/gi, '')
-            .replace(/\r\n/g, '\n')
-            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '\n')
             .replace(/\u200B/g, '')
+            .replace(/\r\n/g, '\n')
             .replace(/\n{3,}/g, '\n\n')
             .trim();
     }
@@ -47,92 +40,194 @@ class OllamaService {
     }
 
     /**
-     * Parse Resume using Ollama API format flag with strict JSON Schema definition
-     * Guarantees non-agglutinated fields (empresa, cargo, periodo strictly separated)
+     * Resilient Regex and Header Block Parser for Deterministic Metadata
      */
+    static #extractDeterministicFields(text) {
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+        // 1. Email & Phone
+        const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
+        const email = emailMatch ? emailMatch[0].trim() : '';
+
+        const phoneMatch = text.match(/(?:\+55\s*)?(?:\(?\d{2}\)?\s*)?9?\d{4}[-\s]?\d{4}/);
+        const phone = phoneMatch ? phoneMatch[0].trim() : '';
+
+        // 2. All Social / Portfolio Links
+        const linkedinMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+/i);
+        const linkedin = linkedinMatch ? (linkedinMatch[0].startsWith('http') ? linkedinMatch[0] : `https://${linkedinMatch[0]}`) : '';
+
+        const githubMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+/i);
+        const github = githubMatch ? (githubMatch[0].startsWith('http') ? githubMatch[0] : `https://${githubMatch[0]}`) : '';
+
+        const xMatch = text.match(/(?:https?:\/\/)?(?:www\.)?(?:x\.com|twitter\.com)\/[a-zA-Z0-9_-]+/i);
+        const x = xMatch ? (xMatch[0].startsWith('http') ? xMatch[0] : `https://${xMatch[0]}`) : '';
+
+        const instagramMatch = text.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/[a-zA-Z0-9_.]+/i);
+        const instagram = instagramMatch ? (instagramMatch[0].startsWith('http') ? instagramMatch[0] : `https://${instagramMatch[0]}`) : '';
+
+        const facebookMatch = text.match(/(?:https?:\/\/)?(?:www\.)?facebook\.com\/[a-zA-Z0-9_.]+/i);
+        const facebook = facebookMatch ? (facebookMatch[0].startsWith('http') ? facebookMatch[0] : `https://${facebookMatch[0]}`) : '';
+
+        const portfolioMatch = text.match(/(?:https?:\/\/)[a-zA-Z0-9_-]+\.github\.io\/?/i);
+        const portfolio = portfolioMatch ? portfolioMatch[0] : '';
+
+        // 3. Clean Location & Header Line Segmentation
+        let name = '';
+        let title = '';
+        let location = '';
+
+        const locationLineRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]{2,30},\s*[A-Z]{2}(?:\s*-\s*[A-Za-zÀ-ÖØ-öø-ÿ]+)?$/;
+
+        const headerCandidates = [];
+        for (const line of lines) {
+            if (/^(RESUMO|COMPETÊNCIAS|EXPERIÊNCIA|HISTÓRICO|FORMAÇÃO|PROJETOS|SUMMARY|SKILLS|EDUCATION)/i.test(line)) {
+                break;
+            }
+            if (line.includes('@') || line.startsWith('http') || line.includes('+55')) continue;
+
+            if (locationLineRegex.test(line)) {
+                location = line.trim();
+            } else {
+                headerCandidates.push(line);
+            }
+        }
+
+        if (headerCandidates.length > 0) name = headerCandidates[0].replace(/^[#*\-•\s]+/, '').trim();
+        if (headerCandidates.length > 1) title = headerCandidates[1].replace(/^[#*\-•\s]+/, '').trim();
+
+        // 4. Summary extraction
+        let professionalSummary = '';
+        const summaryRegex = /(?:RESUMO PROFISSIONAL|RESUMO|SUMMARY|PERFIL)\s*\n([\s\S]*?)(?=\n(?:COMPETÊNCIAS|SKILLS|HISTÓRICO|EXPERIÊNCIA|FORMAÇÃO|PROJETOS|EDUCATION)|$)/i;
+        const summaryMatch = text.match(summaryRegex);
+        if (summaryMatch) {
+            professionalSummary = summaryMatch[1].trim();
+        }
+
+        return {
+            candidate: { name, title, location, email, phone, linkedin, github, x, instagram, facebook, portfolio },
+            professionalSummary
+        };
+    }
+
     async parseResumeWithStructuredSchema(rawText, options = {}) {
         if (!rawText || typeof rawText !== 'string' || !rawText.trim()) {
-            throw new Error('Texto de currículo vazio para parsing estruturado.');
+            throw new Error('Texto de currículo vazio para parsing.');
         }
 
         const sanitizedText = OllamaService.#sanitizeInputText(rawText);
         const ollamaHost = process.env.OLLAMA_HOST || "http://ollama:11434";
         const model = options.model || process.env.OLLAMA_MODEL || "llama3.2";
+        const targetLanguage = options.language || (/[ãõáéíóúâêîôûç]/i.test(sanitizedText) ? 'pt-BR' : 'en-US');
 
-        const systemPrompt = `You are a high-precision data parsing engine specializing in Portuguese candidate resumes.
-Rigorously analyze the raw document text provided below and return ONLY a valid structured JSON object matching the contract schema.
+        const heuristicData = OllamaService.#extractDeterministicFields(sanitizedText);
 
-CRITICAL EXTRACTION RULES:
-1. HEADER BLOCKS:
-   - Extract Full Name ('nome'), Target Title/Role ('titulo'), Location ('localizacao' e.g. Cidade, UF), Email ('email'), Phone number ('telefone'), and Links ('linkedin', 'github').
-2. COMPETENCIES / SKILLS:
-   - The document lists skills in tags/badges under uppercase section titles (e.g., "LINGUAGENS", "FRAMEWORKS E BIBLIOTECAS", "BANCOS DE DADOS", "DEVOPS", "PROTOCOLOS E COMUNICAÇÃO", "METODOLOGIAS E CONCEITOS").
-   - Map each individual item to its respective array inside "competencias" (linguagens, frameworksBibliotecas, bancosDeDados, devops, protocolosComunicacao, metodologiasConceitos).
-3. PROFESSIONAL EXPERIENCE ('experiencias'):
-   - Identify each separate work entry cleanly into individual objects.
-   - "empresa": Organization name (e.g., Teknisa, Azapfy, Commit Jr., NTIC, Sistema Divina Providência).
-   - "cargo": Job title/role (e.g., Desenvolvedor Full-Stack, Instrutor de Informática).
-   - "periodo": Dates/duration (e.g., "Set 2025-Presente", "Out 2021- Set 2024").
-   - "descricaoGeral": Introductory text describing scope/responsibilities (if present).
-   - "realizacoes": Array containing each bullet point (• marker) of responsibilities or achievements. NEVER merge or agglutinate different topics into the same item.
-4. ACADEMIC EDUCATION ('formacaoAcademica'):
-   - Identify each course/degree separately (e.g., "CEFET-MG", "Sistema Divina Providência").
-   - "instituicao": Educational institution name.
-   - "grau": Degree title (e.g., "Bacharelado em Engenharia de Computação", "Técnico em Informática").
-   - "statusOuPeriodo": Status or period (e.g., "Previsão de conclusão em 2028", "Concluído em 2015").
-   - "detalhes": Descriptive text of curriculum focus or achievements.
-5. PERSONAL / FEATURED PROJECTS ('projetos'):
-   - Identify each project individually (e.g., "NativeZip Tools", "Glassmorphic Professional Resume", "Alquerque - Motor de Jogo de Tabuleiro").
-   - "nome": Project title.
-   - "tecnologias": Array with tags/stacks listed right below the project name (e.g., ["C#", "Utilitários de Sistema", "Gerenciamento de Zip"]).
-   - "realizacoes": Array with detailed bullet points for each project.
-6. FONT STYLE TAG PRESERVATION:
-   - Preserve formatting tags <BOLD>text</BOLD> and <ITALIC>text</ITALIC> around styled words inside text blocks.
-7. Output ONLY valid JSON matching the schema, with no preamble or conversational text.`;
+        const systemPrompt = `You are a high-precision deterministic resume parsing engine.
+Analyze the document text and extract technical skills, professional experiences, academic education, and featured projects into valid JSON.
 
-        const userPrompt = `TEXTO DO CURRÍCULO PARA EXTRAÇÃO:\n\n${sanitizedText}`;
+### JSON SCHEMA:
+{
+  "skills": [
+    {
+      "category": "string (e.g. LINGUAGENS, FRAMEWORKS E BIBLIOTECAS, BANCOS DE DADOS, DEVOPS, METODOLOGIAS ÁGEIS)",
+      "items": ["string"]
+    }
+  ],
+  "experiences": [
+    {
+      "company": "string",
+      "position": "string",
+      "period": "string",
+      "generalDescription": "string",
+      "achievements": ["string (each bullet point as a separate item)"]
+    }
+  ],
+  "education": [
+    {
+      "institution": "string (e.g. CEFET-MG, Sistema Divina Providência)",
+      "degree": "string (e.g. Bacharelado em Engenharia de Computação, Técnico em Informática)",
+      "fieldOfStudy": "string",
+      "statusOrPeriod": "string (e.g. Previsão de conclusão em 2028, Concluído em 2015)",
+      "details": "string (all descriptive text paragraphs explaining curriculum or focus)"
+    }
+  ],
+  "projects": [
+    {
+      "name": "string",
+      "technologies": ["string"],
+      "description": "string",
+      "achievements": ["string (extract EACH bullet point as a separate item)"]
+    }
+  ]
+}
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 20000);
+### CRITICAL RULES:
+1. Output ONLY raw JSON matching the schema. No markdown fences.
+2. EDUCATION: Extract EVERY education section, capturing the timeframe into "statusOrPeriod" and the long description into "details".
+3. PROJECTS: Do NOT leave "achievements" empty. Extract every bullet point under the project into the "achievements" array.
+4. Preserve style tags (<BOLD>, </BOLD>, <ITALIC>, </ITALIC>) verbatim inside text items.`;
 
         try {
-            logger.info(`[OllamaService] Sending text to Ollama structured schema parser (model: ${model})`);
+            logger.info(`[OllamaService] Streaming semantic parsing (model: ${model})`);
             const response = await fetch(`${ollamaHost}/api/generate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     model,
                     system: systemPrompt,
-                    prompt: userPrompt,
-                    format: RESUME_JSON_SCHEMA,
-                    stream: false,
-                    options: { temperature: 0.1 }
-                }),
-                signal: controller.signal
+                    prompt: `### DOCUMENT TEXT:\n\n${sanitizedText}`,
+                    format: "json",
+                    stream: true,
+                    options: {
+                        temperature: 0.1,
+                        num_ctx: 4096,
+                        num_predict: 2048
+                    }
+                })
             });
 
-            clearTimeout(timeout);
+            if (!response.ok) {
+                throw new Error(`Ollama HTTP error ${response.status}`);
+            }
 
-            if (response.ok) {
-                const data = await response.json();
-                const responseStr = data?.response;
-                if (responseStr) {
-                    const parsedRaw = JSON.parse(responseStr);
-                    const cleanedSchema = validateAndCleanResumeData(parsedRaw);
-                    const normalized = normalizeToApplicationDTO(cleanedSchema);
-                    logger.info(`[OllamaService] Structured schema parsing succeeded (${cleanedSchema.experiencias?.length || 0} experiences, ${cleanedSchema.projetos?.length || 0} projects)`);
-                    return normalized;
+            let fullLlmResponse = '';
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n').filter(Boolean);
+
+                for (const line of lines) {
+                    try {
+                        const jsonChunk = JSON.parse(line);
+                        if (jsonChunk.response) {
+                            fullLlmResponse += jsonChunk.response;
+                        }
+                    } catch (err) {}
                 }
             }
-        } catch (err) {
-            clearTimeout(timeout);
-            logger.warn(`[OllamaService] Primary model (${model}) structured schema note/timeout:`, err.message);
-        }
 
-        // Fast Heuristic Fallback (<10ms execution guarantees zero timeouts)
-        logger.info('[OllamaService] Executing high-speed heuristic rule-based extraction fallback');
-        const heuristicRaw = OllamaService.#advancedHeuristicExtract(sanitizedText);
-        return normalizeToApplicationDTO(heuristicRaw);
+            const parsedLlmData = JSON.parse(fullLlmResponse.trim());
+
+            const mergedPayload = {
+                candidate: heuristicData.candidate,
+                professionalSummary: heuristicData.professionalSummary || parsedLlmData.professionalSummary || '',
+                skills: parsedLlmData.skills || [],
+                experiences: parsedLlmData.experiences || [],
+                education: parsedLlmData.education || [],
+                projects: parsedLlmData.projects || []
+            };
+
+            const cleaned = validateAndCleanResumeData(mergedPayload);
+            return normalizeToApplicationDTO(cleaned, targetLanguage);
+        } catch (error) {
+            logger.error(`[OllamaService] Streaming failed, using fallback:`, error.message);
+            const fallbackRaw = OllamaService.#advancedHeuristicExtract(sanitizedText);
+            return normalizeToApplicationDTO(fallbackRaw, targetLanguage);
+        }
     }
 
     static async parseResumeWithStructuredSchema(rawText, options = {}) {
@@ -317,39 +412,37 @@ CRITICAL EXTRACTION RULES:
         const projects = this.#parseProjectsSection(sections['PROJETOS'] || '');
 
         return {
-            personalDetails: {
+            candidate: {
                 name: candidateName,
                 title: candidateTitle,
-                contact: {
-                    email: { email, icon: '✉️' },
-                    phone: { phone, link: phone ? `https://wa.me/${phone.replace(/\D/g, '')}` : '', icon: '📞' },
-                    networking: {
-                        linkedin: { name: 'LinkedIn', url: linkedinUrl || '', icon: '💼' },
-                        github: { name: 'GitHub', url: githubUrl || '', icon: '🐙' }
-                    }
-                },
-                location: { location, link: '', icon: '📍' }
+                location,
+                email,
+                phone,
+                linkedin: linkedinUrl || '',
+                github: githubUrl || ''
             },
-            summaryDetails: {
-                summaryTitle: 'RESUMO PROFISSIONAL',
-                summary: summaryText || 'Profissional de tecnologia com sólida experiência no desenvolvimento de sistemas escaláveis e modernas arquiteturas de software.'
-            },
-            skillsDetails: {
-                skillsTitle: 'COMPETÊNCIAS & TECNOLOGIAS',
-                skills: skills.length > 0 ? skills : []
-            },
-            experienceDetails: {
-                experienceTitle: 'HISTÓRICO PROFISSIONAL',
-                experiences: experiences.length > 0 ? experiences : []
-            },
-            educationDetails: {
-                educationTitle: 'FORMAÇÃO ACADÊMICA',
-                educations: educations.length > 0 ? educations : []
-            },
-            projectDetails: {
-                projectTitle: 'PROJETOS DE DESTAQUE',
-                projects: projects.length > 0 ? projects : []
-            }
+            professionalSummary: summaryText || 'Profissional de tecnologia com sólida experiência no desenvolvimento de sistemas escaláveis e modernas arquiteturas de software.',
+            skills: skills.map(s => ({ category: s.name, items: s.items })),
+            experiences: experiences.map(exp => ({
+                company: exp.company,
+                position: exp.position,
+                period: exp.period,
+                generalDescription: '',
+                achievements: exp.bullets
+            })),
+            education: educations.map(edu => ({
+                institution: edu.organization,
+                degree: edu.degree,
+                fieldOfStudy: '',
+                statusOrPeriod: edu.period,
+                details: edu.description
+            })),
+            projects: projects.map(proj => ({
+                name: proj.title,
+                technologies: [],
+                description: proj.description,
+                achievements: proj.bullets
+            }))
         };
     }
 

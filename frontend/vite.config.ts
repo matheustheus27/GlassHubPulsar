@@ -23,8 +23,9 @@ export default defineConfig({
       usePolling: true,
     },
     hmr: {
-      // Deixa o clientPort dinâmico/automático para funcionar tanto na porta 80 quanto na 3000
-      path: '/@vite/client',
+      host: 'localhost',
+      port: 5173,
+      clientPort: 5173,
     },
   },
   assetsInclude: ['**/*.svg', '**/*.csv'],
