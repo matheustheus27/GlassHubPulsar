@@ -44,7 +44,9 @@ export default function App() {
   return (
     <>
       {sessionExpiredMessage && (
-        <Toast message={sessionExpiredMessage} type="error" duration={4000} />
+        <div className="fixed bottom-24 right-6 z-50 max-w-sm pointer-events-none">
+          <Toast message={sessionExpiredMessage} type="error" duration={4000} />
+        </div>
       )}
       {currentView === 'support' ? (
         <SupportPage

@@ -28,7 +28,7 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
     return (
       <div
         onClick={() => setIsMinimized(false)}
-        className="fixed bottom-6 right-6 z-50 cursor-pointer animate-bounce select-none"
+        className="cursor-pointer animate-bounce select-none pointer-events-auto"
       >
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.4)] backdrop-blur-xl text-xs font-bold text-cyan-300">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
@@ -39,10 +39,10 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-80 md:w-96 select-none animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="w-full select-none">
       <GlassSurface
         glow={isCompleted ? 'emerald' : 'cyan'}
-        className="bg-slate-950/85 border-cyan-500/40 shadow-2xl p-4"
+        className="bg-slate-950/85 border-cyan-500/40 shadow-2xl p-4 rounded-2xl backdrop-blur-2xl"
       >
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2">
@@ -58,9 +58,9 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
               className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition cursor-pointer"
               title="Minimizar para badge"
             >
-              ━
+              _
             </button>
-            {isCompleted && onDismiss && (
+            {onDismiss && (
               <button
                 onClick={onDismiss}
                 className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition cursor-pointer"
@@ -72,15 +72,17 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
           </div>
         </div>
 
-        <p className="text-xs text-slate-400 mb-2 truncate">
-          {state.step || 'Processando nós de dados do currículo...'}
+        <p className="text-[11px] text-slate-300 mb-3 truncate">
+          {state.step}
         </p>
 
-        <ProgressBar
-          progress={state.progress}
-          color={isCompleted ? 'emerald' : 'cyan'}
-          showLabel
-        />
+        <div className="space-y-1">
+          <div className="flex justify-between text-[10px] text-slate-400">
+            <span>Progresso</span>
+            <span className="font-bold text-cyan-400">{state.progress}%</span>
+          </div>
+          <ProgressBar progress={state.progress} color={isCompleted ? 'emerald' : 'cyan'} />
+        </div>
       </GlassSurface>
     </div>
   );

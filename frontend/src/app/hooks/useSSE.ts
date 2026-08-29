@@ -61,11 +61,12 @@ export function useSSE() {
 
         // 1. Translation events
         if (data.type === 'TRANSLATION_PROGRESS') {
+          const targetLang = data.targetLang || data.data?.settings?.language || 'en-US';
           setTranslationState({
-            isActive: data.progress < 100,
-            progress: data.progress,
+            isActive: data.progress >= 0 && data.progress < 100,
+            progress: Math.max(0, data.progress),
             step: data.step,
-            targetLang: data.data?.settings?.language || 'en-US'
+            targetLang
           });
 
           if (data.progress === 10) {
@@ -81,6 +82,12 @@ export function useSSE() {
               ...prev.filter(n => !n.id.startsWith('notif-trans-start-'))
             ]);
           } else if (data.progress === 100) {
+            if (data.data) {
+              window.dispatchEvent(new CustomEvent('glasshub_translation_applied', {
+                detail: { document: data.data, targetLang }
+              }));
+            }
+
             setNotifications(prev => [
               {
                 id: `notif-trans-${Date.now()}`,

@@ -14,10 +14,10 @@ export const PDFProgressCard: React.FC<PDFProgressCardProps> = ({ state, onDismi
   const isComplete = state.progress === 100;
 
   return (
-    <div className="fixed bottom-24 right-6 z-50 w-80 animate-in slide-in-from-bottom-5">
+    <div className="w-full select-none">
       <GlassSurface
         glow={isComplete ? 'emerald' : 'cyan'}
-        className="bg-slate-950/95 border-cyan-500/40 p-4 space-y-3 shadow-2xl backdrop-blur-2xl"
+        className="bg-slate-950/95 border-cyan-500/40 p-4 space-y-3 shadow-2xl backdrop-blur-2xl rounded-2xl"
       >
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -29,6 +29,7 @@ export const PDFProgressCard: React.FC<PDFProgressCardProps> = ({ state, onDismi
           <button
             onClick={onDismiss}
             className="text-slate-400 hover:text-white text-xs p-1 rounded hover:bg-white/10 transition cursor-pointer"
+            aria-label="Fechar card de progresso"
           >
             ✕
           </button>

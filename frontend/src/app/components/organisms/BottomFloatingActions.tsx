@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../hooks/useI18n';
 
 interface BottomFloatingActionsProps {
   onOpenATS: () => void;
@@ -15,6 +16,7 @@ export const BottomFloatingActions: React.FC<BottomFloatingActionsProps> = ({
   atsScore,
   estimatedScore
 }) => {
+  const { t } = useI18n();
   const hasScore = (atsScore !== undefined && atsScore !== null) || (estimatedScore !== undefined && estimatedScore !== null);
   const displayScore = hasScore ? (atsScore ?? estimatedScore) : '--';
   const handleAI = onOpenAI || onOpenAIChat || (() => {});
@@ -26,7 +28,7 @@ export const BottomFloatingActions: React.FC<BottomFloatingActionsProps> = ({
         type="button"
         onClick={onOpenATS}
         className="group flex items-center gap-2 px-4 py-3 rounded-full bg-slate-950/90 border border-cyan-500/40 text-slate-100 backdrop-blur-2xl shadow-[0_10px_30px_rgba(6,182,212,0.35)] hover:shadow-[0_10px_40px_rgba(6,182,212,0.6)] hover:border-cyan-400 hover:scale-105 transition-all cursor-pointer"
-        title="Ver Análise de Compatibilidade ATS"
+        title={t('floatingAtsBtn')}
       >
         <span className="text-base">📊</span>
         <span className="text-xs font-bold uppercase tracking-wider text-cyan-300">
@@ -39,10 +41,10 @@ export const BottomFloatingActions: React.FC<BottomFloatingActionsProps> = ({
         type="button"
         onClick={handleAI}
         className="group flex items-center gap-2 px-4 py-3 rounded-full bg-gradient-to-r from-violet-600 to-cyan-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-[0_10px_30px_rgba(139,92,246,0.45)] hover:shadow-[0_10px_40px_rgba(139,92,246,0.7)] hover:scale-105 transition-all cursor-pointer"
-        title="Assistente IA & Preenchimento Rápido"
+        title={t('floatingAiBtn')}
       >
         <span className="text-base animate-bounce">✨</span>
-        <span className="font-extrabold text-slate-950">Assistente IA & Quick Fill</span>
+        <span className="font-extrabold text-slate-950">{t('floatingAiBtn')}</span>
       </button>
     </div>
   );

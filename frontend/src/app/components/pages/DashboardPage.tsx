@@ -22,6 +22,7 @@ import { defaultSettings } from '../../utils/themeDefaults';
 import { Settings, LanguageCode } from '../../types/settingsType';
 import { useAuth } from '../../hooks/useAuth';
 import { useSSE } from '../../hooks/useSSE';
+import { setGlobalLocale } from '../../hooks/useI18n';
 
 interface DashboardPageProps {
   onOpenAdminCockpit?: () => void;
@@ -39,6 +40,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
     notifications,
     unreadCount,
     translationState,
+    setTranslationState,
     pdfExportState,
     markAllNotificationsAsRead,
     clearAllNotifications,
@@ -372,15 +374,80 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
     }));
   };
 
+  // Listen for background translation completions
+  useEffect(() => {
+    const handleTranslationApplied = (event: any) => {
+      const { document: translatedDoc, targetLang } = event.detail || {};
+      if (translatedDoc) {
+        setDocData((prev: any) => ({
+          ...prev,
+          personalDetails: translatedDoc.personalDetails || translatedDoc.personal || prev.personalDetails,
+          summaryDetails: translatedDoc.summaryDetails || translatedDoc.summary || prev.summaryDetails,
+          skillsDetails: translatedDoc.skillsDetails || translatedDoc.skills || prev.skillsDetails,
+          experienceDetails: translatedDoc.experienceDetails || translatedDoc.experiences || prev.experienceDetails,
+          educationDetails: translatedDoc.educationDetails || translatedDoc.education || prev.educationDetails,
+          projectDetails: translatedDoc.projectDetails || translatedDoc.projects || prev.projectDetails
+        }));
+
+        setToast({
+          message: `✓ Currículo traduzido com sucesso para ${targetLang}!`,
+          type: 'success'
+        });
+      }
+    };
+
+    window.addEventListener('glasshub_translation_applied', handleTranslationApplied);
+    return () => window.removeEventListener('glasshub_translation_applied', handleTranslationApplied);
+  }, []);
+
   // International version creation handler
-  const handleCreateVersion = (targetLang: string, mode: 'AI' | 'MANUAL') => {
+  const handleCreateVersion = async (targetLang: string, mode: 'AI' | 'MANUAL') => {
     setDocLanguage(targetLang as LanguageCode);
-    setToast({
-      message: mode === 'AI'
-        ? `Versão em ${targetLang} gerada!`
-        : `Nova versão em ${targetLang} iniciada.`,
-      type: 'success'
-    });
+    setGlobalLocale(targetLang as any);
+
+    if (mode === 'AI') {
+      setTranslationState({
+        isActive: true,
+        progress: 15,
+        step: `Iniciando tradução com TranslateGemma / Llama 3.2 (${targetLang})...`,
+        targetLang
+      });
+
+      setToast({
+        message: `Tradução iniciada para ${targetLang} no worker...`,
+        type: 'success'
+      });
+
+      try {
+        const res = await fetch('/api/resume/translate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': accessToken ? `Bearer ${accessToken}` : ''
+          },
+          body: JSON.stringify({
+            document: docData,
+            targetLang
+          })
+        });
+
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || 'Falha ao despachar tradução');
+        }
+      } catch (err: any) {
+        setToast({
+          message: err.message || 'Erro ao iniciar tradução',
+          type: 'error'
+        });
+        setTranslationState(prev => ({ ...prev, isActive: false, progress: 0 }));
+      }
+    } else {
+      setToast({
+        message: `Nova versão em ${targetLang} iniciada para edição manual.`,
+        type: 'success'
+      });
+    }
   };
 
   return (
@@ -515,17 +582,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
             )}
           </div>
 
-          {/* FLOATING ASYNC WORKER PROGRESS NOTIFICATIONS (TOP RIGHT STACKED) */}
-          <div className="fixed top-24 right-6 z-50 flex flex-col gap-3 max-w-sm pointer-events-auto">
-            {translationState.isActive && (
-              <TranslationProgressCard state={translationState} onDismiss={resetTranslation} />
-            )}
-
-            {pdfExportState.isActive && (
-              <PDFProgressCard state={pdfExportState} onDismiss={resetPdfExport} />
-            )}
-          </div>
-
           {/* BOTTOM FLOATING ACTION TRIGGERS */}
           <BottomFloatingActions
             onOpenATS={() => setOpenATSScore(true)}
@@ -566,14 +622,30 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
             onApplyStructuredData={handleApplyQuickFill}
           />
 
-          {/* TOAST NOTIFICATIONS */}
-          {toast && (
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={() => setToast(null)}
-            />
-          )}
+          {/* FLOATING NOTIFICATIONS & WORKER FEEDBACK STACK (BOTTOM-RIGHT) */}
+          <div className="fixed bottom-24 right-6 z-50 flex flex-col-reverse gap-3 items-end pointer-events-none max-w-sm w-full">
+            {toast && (
+              <div className="pointer-events-auto w-full animate-in fade-in slide-in-from-bottom-3 duration-300">
+                <Toast
+                  message={toast.message}
+                  type={toast.type}
+                  onClose={() => setToast(null)}
+                />
+              </div>
+            )}
+
+            {pdfExportState.isActive && (
+              <div className="pointer-events-auto w-full animate-in fade-in slide-in-from-bottom-3 duration-300">
+                <PDFProgressCard state={pdfExportState} onDismiss={resetPdfExport} />
+              </div>
+            )}
+
+            {translationState.isActive && (
+              <div className="pointer-events-auto w-full animate-in fade-in slide-in-from-bottom-3 duration-300">
+                <TranslationProgressCard state={translationState} onDismiss={resetTranslation} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
