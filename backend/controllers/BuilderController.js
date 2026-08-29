@@ -140,9 +140,12 @@ class BuilderController {
                 return res.status(404).json({ success: false, error: "Arquivo PDF expirado ou não encontrado." });
             }
 
+            const downloadName = entry.fileName || 'Curriculo_GlassHub.pdf';
+            const encodedName = encodeURIComponent(downloadName);
+
             res.set({
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `attachment; filename="${entry.fileName || 'Curriculo_GlassHub.pdf'}"`,
+                "Content-Disposition": `attachment; filename="${downloadName}"; filename*=UTF-8''${encodedName}`,
                 "Content-Length": entry.buffer.length
             });
 
@@ -211,9 +214,10 @@ class BuilderController {
                 fileName
             });
 
+            const encodedFileName = encodeURIComponent(fileName);
             res.set({
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `attachment; filename="${fileName}"`,
+                "Content-Disposition": `attachment; filename="${fileName}"; filename*=UTF-8''${encodedFileName}`,
                 "Content-Length": pdf.length
             });
 

@@ -30,15 +30,15 @@ async function runPaginationAndVisualTests() {
     const cleanLang = (language || "pt-BR").trim();
     const isEn = cleanLang.toLowerCase().startsWith("en");
     const isEs = cleanLang.toLowerCase().startsWith("es");
-    const prefix = isEn ? "Resume" : (isEs ? "Curriculum" : "Currículo");
+    const prefix = isEn ? "Resume" : (isEs ? "Curriculum" : "Curriculo");
 
     return `${prefix}_${namePart}_${cleanLang}.pdf`;
   }
 
-  assert.strictEqual(formatPdfFileName("Alexandre Silva dos Santos", "pt-BR"), "Currículo_Alexandre_Santos_pt-BR.pdf");
+  assert.strictEqual(formatPdfFileName("Alexandre Silva dos Santos", "pt-BR"), "Curriculo_Alexandre_Santos_pt-BR.pdf");
   assert.strictEqual(formatPdfFileName("Alexandre Santos", "en-US"), "Resume_Alexandre_Santos_en-US.pdf");
   assert.strictEqual(formatPdfFileName("John Doe", "es-ES"), "Curriculum_John_Doe_es-ES.pdf");
-  assert.strictEqual(formatPdfFileName("Bernardo Ferreira", "pt-BR"), "Currículo_Bernardo_Ferreira_pt-BR.pdf");
+  assert.strictEqual(formatPdfFileName("Bernardo Ferreira", "pt-BR"), "Curriculo_Bernardo_Ferreira_pt-BR.pdf");
   console.log('✅ Test 1 Passed: PDF filename formatted as PREFIX_Name_LastName_LANG.pdf');
 
   // --- TEST 2: Vector SVGs for Facebook, X, Instagram, LinkedIn, GitHub ---

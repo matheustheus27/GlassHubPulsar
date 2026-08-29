@@ -91,7 +91,7 @@ async function runPdfWorkerE2ETests() {
     type: 'resume',
     document: mockResumeData,
     candidateName: 'ALEXANDRE DA SILVA SANTOS',
-    fileName: 'Currículo_Alexandre_Santos_pt-BR.pdf',
+    fileName: 'Curriculo_Alexandre_Santos_pt-BR.pdf',
     language: 'pt-BR'
   });
 
@@ -149,7 +149,7 @@ async function runPdfWorkerE2ETests() {
       type: 'resume',
       document: mockResumeData,
       candidateName: 'ALEXANDRE DA SILVA SANTOS',
-      fileName: 'Currículo_Alexandre_Santos_pt-BR.pdf',
+      fileName: 'Curriculo_Alexandre_Santos_pt-BR.pdf',
       language: 'pt-BR'
     }
   });

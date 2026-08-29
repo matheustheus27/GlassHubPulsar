@@ -66,7 +66,7 @@ export async function exportDocumentToPDF({
   const cleanLang = (lang || 'pt-BR').trim();
   const isEn = cleanLang.toLowerCase().startsWith("en");
   const isEs = cleanLang.toLowerCase().startsWith("es");
-  const prefix = isEn ? "Resume" : (isEs ? "Curriculum" : "Currículo");
+  const prefix = isEn ? "Resume" : (isEs ? "Curriculum" : "Curriculo");
 
   const fileName = `${prefix}_${namePart}_${cleanLang}.pdf`;
 
