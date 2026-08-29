@@ -115,25 +115,44 @@ class ResumeController {
   async translateAsync(req, res) {
     try {
       const { document, targetLang = 'en-US' } = req.body;
-      const userId = req.user?.id || 'anonymous-user';
+      const userId = req.user?.id || req.body?.userId || 'demo-user-default';
 
       if (!document) {
         return res.status(400).json({ success: false, error: 'Documento ausente' });
       }
 
-      const queue = queueManager.getQueue('translation');
-      const job = await queue.add('translate_resume', {
+      const jobId = `trans_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+      logger.info(`[ResumeController] Enqueuing async translation job [${jobId}] to ${targetLang}`);
+
+      // Dispatch via MessageBroker (primary, with InMemory fallback)
+      const messageBroker = require('../messaging/MessageBroker');
+      await messageBroker.dispatch('translation', {
+        jobId,
         document,
         targetLang,
         userId
       });
 
-      logger.info(`Dispatched translation job [${job.id}] to ${targetLang}`);
+      // Also enqueue to BullMQ for legacy/dashboard tracking
+      try {
+        const queue = queueManager.getQueue('translation');
+        await queue.add('translate_resume', {
+          jobId,
+          document,
+          targetLang,
+          userId
+        });
+      } catch (qErr) {
+        logger.debug('[ResumeController] BullMQ queue add note:', qErr.message);
+      }
+
+      logger.info(`[ResumeController] Dispatched translation job [${jobId}] to ${targetLang}`);
 
       return res.status(202).json({
         success: true,
         message: 'Tradução iniciada em segundo plano',
-        jobId: job.id,
+        jobId,
         targetLang
       });
 

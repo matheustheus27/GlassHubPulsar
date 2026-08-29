@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ProgressBar } from '../atoms/ProgressBar';
 import { GlassSurface } from '../atoms/GlassSurface';
+import { useI18n } from '../../hooks/useI18n';
 
 export interface TranslationState {
   isActive: boolean;
@@ -18,11 +19,13 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
   state,
   onDismiss
 }) => {
+  const { t, locale } = useI18n();
   const [isMinimized, setIsMinimized] = useState(false);
 
   if (!state.isActive) return null;
 
   const isCompleted = state.progress >= 100;
+  const langName = state.targetLang.startsWith('en') ? 'English (US)' : (state.targetLang.startsWith('es') ? 'Español' : (state.targetLang.startsWith('fr') ? 'Français' : (state.targetLang.startsWith('de') ? 'Deutsch' : 'Português')));
 
   if (isMinimized) {
     return (
@@ -32,7 +35,7 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
       >
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.4)] backdrop-blur-xl text-xs font-bold text-cyan-300">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          <span>🌍 {state.targetLang}: {state.progress}%</span>
+          <span>🌍 {langName}: {state.progress}%</span>
         </div>
       </div>
     );
@@ -48,7 +51,7 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
           <div className="flex items-center gap-2">
             <span className="text-base">{isCompleted ? '🎉' : '🌍'}</span>
             <h4 className="text-xs font-bold text-slate-100 uppercase tracking-wider">
-              {isCompleted ? 'Tradução Concluída' : `Traduzindo para ${state.targetLang}`}
+              {isCompleted ? t('translationCompleted') : `${t('translatingTo')} ${langName}`}
             </h4>
           </div>
 
@@ -56,7 +59,7 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
             <button
               onClick={() => setIsMinimized(true)}
               className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition cursor-pointer"
-              title="Minimizar para badge"
+              title={t('minimize')}
             >
               _
             </button>
@@ -64,7 +67,7 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
               <button
                 onClick={onDismiss}
                 className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition cursor-pointer"
-                title="Fechar"
+                title={t('close')}
               >
                 ✕
               </button>
@@ -78,7 +81,7 @@ export const TranslationProgressCard: React.FC<TranslationProgressCardProps> = (
 
         <div className="space-y-1">
           <div className="flex justify-between text-[10px] text-slate-400">
-            <span>Progresso</span>
+            <span>{t('progressLabel')}</span>
             <span className="font-bold text-cyan-400">{state.progress}%</span>
           </div>
           <ProgressBar progress={state.progress} color={isCompleted ? 'emerald' : 'cyan'} />

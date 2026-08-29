@@ -1,7 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
-import { uiTranslations, UILanguage } from '../i18n/uiTranslations';
+import { uiTranslations, UILanguage, SUPPORTED_LANGUAGES } from '../i18n/uiTranslations';
 
-let globalLocale: UILanguage = (typeof window !== 'undefined' && (localStorage.getItem('glasshub_ui_lang') as UILanguage)) || 'pt-BR';
+function detectInitialLocale(): UILanguage {
+  if (typeof window === 'undefined') return 'pt-BR';
+
+  // 1. Check user explicit setting in localStorage
+  const saved = localStorage.getItem('glasshub_ui_lang') as UILanguage;
+  if (saved && ['pt-BR', 'en-US', 'es-ES', 'fr-FR', 'de-DE'].includes(saved)) {
+    return saved;
+  }
+
+  // 2. Auto-detect browser language transmitted by navigator
+  const navLang = (navigator.language || (navigator.languages && navigator.languages[0]) || '').toLowerCase();
+  if (navLang.startsWith('pt')) return 'pt-BR';
+  if (navLang.startsWith('es')) return 'es-ES';
+  if (navLang.startsWith('fr')) return 'fr-FR';
+  if (navLang.startsWith('de')) return 'de-DE';
+  if (navLang.startsWith('en')) return 'en-US';
+
+  return 'pt-BR';
+}
+
+let globalLocale: UILanguage = detectInitialLocale();
 const listeners = new Set<(l: UILanguage) => void>();
 
 export function setGlobalLocale(newLocale: UILanguage) {
@@ -35,6 +55,7 @@ export function useI18n() {
   return {
     locale,
     setLocale,
-    t
+    t,
+    supportedLanguages: SUPPORTED_LANGUAGES
   };
 }

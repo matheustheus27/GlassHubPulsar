@@ -5,6 +5,7 @@ import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
 import { GlassHubLogo } from '../atoms/GlassHubLogo';
 import { AuthModal } from '../organisms/AuthModal';
+import { LanguageSelector } from '../molecules/LanguageSelector';
 import { useAuth } from '../../hooks/useAuth';
 
 interface SupportPageProps {
@@ -266,6 +267,8 @@ export const SupportPage: React.FC<SupportPageProps> = ({
                 Página Inicial
               </Button>
             )}
+
+            <LanguageSelector />
 
             {!user && (
               <Button

@@ -6,6 +6,7 @@ import { Badge } from '../atoms/Badge';
 import { GlassHubLogo } from '../atoms/GlassHubLogo';
 import { AuthModal } from '../organisms/AuthModal';
 import { CustomerHelpModal } from '../organisms/CustomerHelpModal';
+import { LanguageSelector } from '../molecules/LanguageSelector';
 
 interface LandingPageProps {
   onLoginSuccess: (user: any, token: string) => void;
@@ -71,6 +72,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginSuccess, onNavi
           </div>
 
           <div className="flex items-center gap-2.5">
+            <LanguageSelector />
             <Button variant="ghost" size="sm" onClick={handleOpenHelp} className="text-xs font-bold md:hidden">
               ❓
             </Button>

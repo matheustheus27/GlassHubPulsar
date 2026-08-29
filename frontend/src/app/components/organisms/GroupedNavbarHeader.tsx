@@ -251,29 +251,28 @@ export const GroupedNavbarHeader: React.FC<GroupedNavbarHeaderProps> = ({
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
                   {t('languageLabel')}
                 </span>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setLocale('pt-BR')}
-                    className={`p-2 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                      locale === 'pt-BR'
-                        ? 'bg-cyan-950/50 border-cyan-500/50 text-cyan-300'
-                        : 'bg-slate-900/60 border-white/5 text-slate-400'
-                    }`}
-                  >
-                    🇧🇷 Português
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocale('en-US')}
-                    className={`p-2 rounded-xl border text-xs font-bold transition cursor-pointer ${
-                      locale === 'en-US'
-                        ? 'bg-cyan-950/50 border-cyan-500/50 text-cyan-300'
-                        : 'bg-slate-900/60 border-white/5 text-slate-400'
-                    }`}
-                  >
-                    🇺🇸 English
-                  </button>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {[
+                    { code: 'pt-BR', label: 'Português', flag: '🇧🇷' },
+                    { code: 'en-US', label: 'English', flag: '🇺🇸' },
+                    { code: 'es-ES', label: 'Español', flag: '🇪🇸' },
+                    { code: 'fr-FR', label: 'Français', flag: '🇫🇷' },
+                    { code: 'de-DE', label: 'Deutsch', flag: '🇩🇪' }
+                  ].map(lang => (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      onClick={() => setLocale(lang.code as any)}
+                      className={`p-2 rounded-xl border text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                        locale === lang.code
+                          ? 'bg-cyan-950/50 border-cyan-500/50 text-cyan-300'
+                          : 'bg-slate-900/60 border-white/5 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <span>{lang.flag}</span>
+                      <span>{lang.label}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 

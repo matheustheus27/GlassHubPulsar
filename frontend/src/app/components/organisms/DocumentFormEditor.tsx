@@ -456,7 +456,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
             leftIcon="💾"
             className="text-xs font-black shadow-[0_0_15px_rgba(6,182,212,0.3)]"
           >
-            Salvar
+            {isSaving ? t('saving') : t('saveBtn')}
           </Button>
         )}
       </div>
@@ -549,7 +549,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
 
             <div className="md:col-span-2">
               <label className="text-xs font-bold text-slate-300 block mb-1">
-                {t('labelLocation')} <span className="text-[10px] text-cyan-400 font-normal">(Link dinâmico gerado para o Google Maps)</span>
+                {t('labelLocation')} <span className="text-[10px] text-cyan-400 font-normal">{t('mapsLinkHint')}</span>
               </label>
               <input
                 type="text"
@@ -683,7 +683,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                 type="button"
                 onClick={() => insertTag('BOLD', summary.summary || '', updateSummary)}
                 className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-cyan-300 border border-cyan-500/30 transition cursor-pointer"
-                title="Inserir negrito"
+                title={t('insertTagBold')}
               >
                 &lt;BOLD&gt;
               </button>
@@ -691,7 +691,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                 type="button"
                 onClick={() => insertTag('HIGHLIGHT', summary.summary || '', updateSummary)}
                 className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-300 border border-amber-500/30 transition cursor-pointer"
-                title="Inserir destaque"
+                title={t('insertTagHighlight')}
               >
                 &lt;HIGHLIGHT&gt;
               </button>
@@ -699,7 +699,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                 type="button"
                 onClick={() => insertTag('ITALIC', summary.summary || '', updateSummary)}
                 className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-violet-300 border border-violet-500/30 transition cursor-pointer"
-                title="Inserir itálico"
+                title={t('insertTagItalic')}
               >
                 &lt;ITALIC&gt;
               </button>
@@ -725,7 +725,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
             </h3>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={sortExperiencesByDate} leftIcon="🔄">
-                Ordenar por Data
+                {t('sortByDate')}
               </Button>
               <Button variant="neon" size="sm" onClick={addExperience} leftIcon="+">
                 {t('addExperienceBtn')}
@@ -740,7 +740,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
               return (
                 <div key={idx} className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3 shadow-lg relative group">
                   <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                    <span className="text-xs font-bold text-slate-200">Cargo #{idx + 1}</span>
+                    <span className="text-xs font-bold text-slate-200">{t('roleNumber')} #{idx + 1}</span>
 
                     <div className="flex items-center gap-1.5">
                       <button
@@ -748,7 +748,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                         onClick={() => moveExperience(idx, 'up')}
                         disabled={idx === 0}
                         className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300 cursor-pointer"
-                        title="Mover para cima"
+                        title={t('moveUp')}
                       >
                         ▲
                       </button>
@@ -757,7 +757,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                         onClick={() => moveExperience(idx, 'down')}
                         disabled={idx === experiences.length - 1}
                         className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300 cursor-pointer"
-                        title="Mover para baixo"
+                        title={t('moveDown')}
                       >
                         ▼
                       </button>
@@ -765,9 +765,9 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                         type="button"
                         onClick={() => addExperienceAfter(idx)}
                         className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/40 text-cyan-300 text-xs font-bold hover:bg-cyan-900 cursor-pointer"
-                        title="Inserir cargo após este"
+                        title={t('insertBelow')}
                       >
-                        + Inserir Abaixo
+                        {t('insertBelow')}
                       </button>
                       <button
                         type="button"
@@ -820,7 +820,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                         }}
                         className="rounded border-slate-700 text-cyan-500 focus:ring-cyan-400 cursor-pointer"
                       />
-                      Emprego Atual (Trabalho aqui atualmente)
+                      {t('currentJobLabel')}
                     </label>
                   </div>
 
@@ -833,14 +833,14 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                           type="text"
                           value={bullet}
                           onChange={e => updateExpBullet(idx, bIdx, e.target.value)}
-                          placeholder="Conquista mensurável com impacto ou métricas..."
+                          placeholder={t('measuringAchievement')}
                           className="flex-1 px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-xs md:text-sm text-slate-200 placeholder-slate-500 font-sans"
                         />
                         <button
                           type="button"
                           onClick={() => removeExpBullet(idx, bIdx)}
                           className="px-2.5 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-400 hover:text-red-200 text-xs font-bold transition cursor-pointer"
-                          title="Apagar este bullet"
+                          title={t('deleteBullet')}
                         >
                           ✕
                         </button>
@@ -891,9 +891,9 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                     type="button"
                     onClick={() => removeSkillCategory(cIdx)}
                     className="px-3 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-500/30 text-red-400 hover:text-red-200 text-xs font-bold transition cursor-pointer shrink-0"
-                    title="Remover esta categoria de habilidades"
+                    title={t('removeCategory')}
                   >
-                    ✕ Remover Categoria
+                    {t('removeCategory')}
                   </button>
                 </div>
 
@@ -941,7 +941,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                       }
                     }}
                   >
-                    Adicionar Várias
+                    {t('addTagBtn')}
                   </Button>
                 </div>
               </div>
@@ -950,7 +950,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
         </div>
       )}
 
-      {/* 5. EDUCAÇÃO */}
+      {/* 5. FORMAÇÃO ACADÊMICA */}
       {section === 'education' && activeTab === 'resume' && (
         <div className="space-y-4 animate-in fade-in">
           <div className="flex flex-wrap justify-between items-center gap-2">
@@ -959,7 +959,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
             </h3>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={sortEducationByDate} leftIcon="🔄">
-                Ordenar por Data
+                {t('sortByDate')}
               </Button>
               <Button variant="neon" size="sm" onClick={addEducation} leftIcon="+">
                 {t('addEducationBtn')}
@@ -975,9 +975,9 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
             )}
 
             {educations.map((edu: any, idx: number) => (
-              <div key={idx} className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3 shadow-lg">
+              <div key={idx} className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3 shadow-lg relative group">
                 <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <span className="text-xs font-bold text-slate-200">Formação #{idx + 1}</span>
+                  <span className="text-xs font-bold text-slate-200">{t('sectionEducation')} #{idx + 1}</span>
 
                   <div className="flex items-center gap-1.5">
                     <button
@@ -985,7 +985,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                       onClick={() => moveEducation(idx, 'up')}
                       disabled={idx === 0}
                       className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300 cursor-pointer"
-                      title="Mover para cima"
+                      title={t('moveUp')}
                     >
                       ▲
                     </button>
@@ -994,7 +994,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                       onClick={() => moveEducation(idx, 'down')}
                       disabled={idx === educations.length - 1}
                       className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300 cursor-pointer"
-                      title="Mover para baixo"
+                      title={t('moveDown')}
                     >
                       ▼
                     </button>
@@ -1002,9 +1002,9 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                       type="button"
                       onClick={() => addEducationAfter(idx)}
                       className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/40 text-cyan-300 text-xs font-bold hover:bg-cyan-900 cursor-pointer"
-                      title="Inserir formação após esta"
+                      title={t('insertBelow')}
                     >
-                      + Inserir Abaixo
+                      {t('insertBelow')}
                     </button>
                     <button
                       type="button"
@@ -1052,27 +1052,27 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
 
                 {/* Status Helpers */}
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <span className="text-[11px] text-slate-400 font-bold self-center">Formatação Rápida:</span>
+                  <span className="text-[11px] text-slate-400 font-bold self-center">{t('quickFormatLabel')}</span>
                   <button
                     type="button"
                     onClick={() => updateEducation(idx, 'period', 'Concluído em 2024')}
                     className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-emerald-300 font-semibold"
                   >
-                    ✓ Concluído em YYYY
+                    {t('completedInYear')}
                   </button>
                   <button
                     type="button"
                     onClick={() => updateEducation(idx, 'period', 'Previsão de conclusão em 2026')}
                     className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-cyan-300 font-semibold"
                   >
-                    ⏳ Previsão de conclusão em YYYY
+                    {t('expectedInYear')}
                   </button>
                   <button
                     type="button"
                     onClick={() => updateEducation(idx, 'period', 'Incompleto')}
                     className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-amber-300 font-semibold"
                   >
-                    ⚠️ Incompleto
+                    {t('incomplete')}
                   </button>
                 </div>
               </div>
@@ -1096,14 +1096,14 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
           <div className="space-y-3.5">
             {projects.length === 0 && (
               <div className="text-center py-8 text-xs text-slate-500 bg-slate-900/40 rounded-xl border border-white/5">
-                Nenhum projeto adicionado. Clique em "Adicionar Projeto" acima.
+                {t('emptyProjects')}
               </div>
             )}
 
             {projects.map((proj: any, idx: number) => (
               <div key={idx} className="p-4 rounded-xl bg-slate-900/80 border border-white/10 space-y-3 shadow-lg">
                 <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <span className="text-xs font-bold text-slate-200">Projeto #{idx + 1}</span>
+                  <span className="text-xs font-bold text-slate-200">{t('sectionProjects')} #{idx + 1}</span>
 
                   <div className="flex items-center gap-1.5">
                     <button
@@ -1111,7 +1111,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                       onClick={() => moveProject(idx, 'up')}
                       disabled={idx === 0}
                       className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300 cursor-pointer"
-                      title="Mover para cima"
+                      title={t('moveUp')}
                     >
                       ▲
                     </button>
@@ -1120,7 +1120,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                       onClick={() => moveProject(idx, 'down')}
                       disabled={idx === projects.length - 1}
                       className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs text-slate-300 cursor-pointer"
-                      title="Mover para baixo"
+                      title={t('moveDown')}
                     >
                       ▼
                     </button>
@@ -1128,9 +1128,9 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
                       type="button"
                       onClick={() => addProjectAfter(idx)}
                       className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/40 text-cyan-300 text-xs font-bold hover:bg-cyan-900 cursor-pointer"
-                      title="Inserir projeto após este"
+                      title={t('insertBelow')}
                     >
-                      + Inserir Abaixo
+                      {t('insertBelow')}
                     </button>
                     <button
                       type="button"

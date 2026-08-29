@@ -22,7 +22,7 @@ import { defaultSettings } from '../../utils/themeDefaults';
 import { Settings, LanguageCode } from '../../types/settingsType';
 import { useAuth } from '../../hooks/useAuth';
 import { useSSE } from '../../hooks/useSSE';
-import { setGlobalLocale } from '../../hooks/useI18n';
+import { setGlobalLocale, useI18n } from '../../hooks/useI18n';
 
 interface DashboardPageProps {
   onOpenAdminCockpit?: () => void;
@@ -30,6 +30,7 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit, onOpenSupport }) => {
+  const { t } = useI18n();
   const { user, accessToken, isAdmin, logoutUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'resume' | 'cover'>('resume');
   const [template, setTemplate] = useState<TemplateType>('GlassModern');
@@ -523,7 +524,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
                   <div className={`flex items-center justify-between pb-3 mb-4 border-b ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                        👁️ Visualização Vetorial em Tempo Real
+                        👁️ {t('realtimeVectorPreview')}
                       </span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-bold">
                         A4 Standard
