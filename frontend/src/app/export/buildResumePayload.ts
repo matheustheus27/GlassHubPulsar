@@ -20,9 +20,9 @@ export function buildResumePayload(
   const networkContacts: Array<{ title: string; link: string; icon: string }> = [];
 
   const knownKeys = ['portfolio', 'linkedin', 'github', 'x', 'twitter', 'instagram', 'facebook'];
-  if (networking.portfolio?.url) networkContacts.push({ title: networking.portfolio.name || 'Portfólio', link: networking.portfolio.url, icon: networking.portfolio.icon || '🌐' });
-  if (networking.linkedin?.url) networkContacts.push({ title: networking.linkedin.name || 'LinkedIn', link: networking.linkedin.url, icon: networking.linkedin.icon || '💼' });
-  if (networking.github?.url) networkContacts.push({ title: networking.github.name || 'GitHub', link: networking.github.url, icon: networking.github.icon || '🐙' });
+  if (networking.portfolio?.url) networkContacts.push({ title: networking.portfolio.name || 'Portfólio', link: networking.portfolio.url, icon: networking.portfolio.icon || 'portfolio' });
+  if (networking.linkedin?.url) networkContacts.push({ title: networking.linkedin.name || 'LinkedIn', link: networking.linkedin.url, icon: networking.linkedin.icon || 'linkedin' });
+  if (networking.github?.url) networkContacts.push({ title: networking.github.name || 'GitHub', link: networking.github.url, icon: networking.github.icon || 'github' });
   const xContact = networking.x || networking.twitter;
   if (xContact?.url) networkContacts.push({ title: xContact.name || 'X', link: xContact.url, icon: xContact.icon || 'x' });
   if (networking.instagram?.url) networkContacts.push({ title: networking.instagram.name || 'Instagram', link: networking.instagram.url, icon: networking.instagram.icon || 'instagram' });

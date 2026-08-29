@@ -36,9 +36,9 @@ export const ResumeLayout: React.FC<ResumeLayoutProps> = ({
     ...(personal.location ? [{ title: personal.location.location, link: personal.location.link, icon: personal.location.icon || '📍' }] : []),
     ...(personal.contact?.email ? [{ title: personal.contact.email.email, link: `mailto:${personal.contact.email.email}`, icon: personal.contact.email.icon || '✉️' }] : []),
     ...(personal.contact?.phone ? [{ title: personal.contact.phone.phone, link: personal.contact.phone.link, icon: personal.contact.phone.icon || '📞' }] : []),
-    ...(net.portfolio?.url ? [{ title: net.portfolio.name || 'Portfólio', link: net.portfolio.url, icon: net.portfolio.icon || '🌐' }] : []),
-    ...(net.linkedin?.url ? [{ title: net.linkedin.name || 'LinkedIn', link: net.linkedin.url, icon: net.linkedin.icon || '💼' }] : []),
-    ...(net.github?.url ? [{ title: net.github.name || 'GitHub', link: net.github.url, icon: net.github.icon || '🐙' }] : []),
+    ...(net.portfolio?.url ? [{ title: net.portfolio.name || 'Portfólio', link: net.portfolio.url, icon: net.portfolio.icon || 'portfolio' }] : []),
+    ...(net.linkedin?.url ? [{ title: net.linkedin.name || 'LinkedIn', link: net.linkedin.url, icon: net.linkedin.icon || 'linkedin' }] : []),
+    ...(net.github?.url ? [{ title: net.github.name || 'GitHub', link: net.github.url, icon: net.github.icon || 'github' }] : []),
     ...((net.x?.url || net.twitter?.url) ? [{ title: net.x?.name || net.twitter?.name || 'X', link: net.x?.url || net.twitter?.url, icon: net.x?.icon || net.twitter?.icon || 'x' }] : []),
     ...(net.instagram?.url ? [{ title: net.instagram.name || 'Instagram', link: net.instagram.url, icon: net.instagram.icon || 'instagram' }] : []),
     ...(net.facebook?.url ? [{ title: net.facebook.name || 'Facebook', link: net.facebook.url, icon: net.facebook.icon || 'facebook' }] : [])

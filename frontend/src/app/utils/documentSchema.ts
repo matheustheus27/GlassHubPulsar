@@ -6,9 +6,9 @@ export const defaultDocumentData = {
       email: { email: 'alexandre.silveira@exemplo.com', icon: '✉️' },
       phone: { phone: '+55 (11) 98765-4321', link: 'https://wa.me/5511987654321', icon: '📞' },
       networking: {
-        portfolio: { name: 'Portfólio', url: 'https://alexandre.dev', icon: '🌐' },
-        linkedin: { name: 'LinkedIn', url: 'https://linkedin.com/in/alexandre-silveira', icon: '💼' },
-        github: { name: 'GitHub', url: 'https://github.com/alexandre-silveira', icon: '🐙' }
+        portfolio: { name: 'Portfólio', url: 'https://alexandre.dev', icon: 'portfolio' },
+        linkedin: { name: 'LinkedIn', url: 'https://linkedin.com/in/alexandre-silveira', icon: 'linkedin' },
+        github: { name: 'GitHub', url: 'https://github.com/alexandre-silveira', icon: 'github' }
       }
     },
     location: {
@@ -104,9 +104,9 @@ export const createCleanDocumentData = (user?: { name?: string; email?: string }
       email: { email: user?.email || '', icon: '✉️' },
       phone: { phone: '', link: '', icon: '📞' },
       networking: {
-        portfolio: { name: 'Portfólio', url: '', icon: '🌐' },
-        linkedin: { name: 'LinkedIn', url: '', icon: '💼' },
-        github: { name: 'GitHub', url: '', icon: '🐙' }
+        portfolio: { name: 'Portfólio', url: '', icon: 'portfolio' },
+        linkedin: { name: 'LinkedIn', url: '', icon: 'linkedin' },
+        github: { name: 'GitHub', url: '', icon: 'github' }
       }
     },
     location: {

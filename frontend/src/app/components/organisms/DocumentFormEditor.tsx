@@ -565,7 +565,7 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
               <input
                 type="text"
                 value={net.portfolio?.url || ''}
-                onChange={e => updateNetworking('portfolio', 'Portfólio', e.target.value, '🌐')}
+                onChange={e => updateNetworking('portfolio', 'Portfólio', e.target.value, 'portfolio')}
                 placeholder="https://seusite.dev"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-sans"
               />

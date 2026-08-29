@@ -257,8 +257,13 @@ async function runPdfEngineAuditedTests() {
   assert(xSvg.includes('<path d="M4 4l11.733'), 'X SVG must be distinct X icon');
   assert(instagramSvg.includes('rect') && instagramSvg.includes('rx="5"'), 'Instagram SVG must be distinct Instagram icon');
   assert(facebookSvg.includes('<path d="M18 2h-3'), 'Facebook SVG must be distinct Facebook icon');
+  const portfolioGithubIoItem = { title: "Portfólio", link: "https://matheustheus27.github.io", icon: "portfolio" };
+  const portfolioGithubIoSvg = ContactLinkOptimizer.getSvgIcon(portfolioGithubIoItem);
+
   assert(portfolioSvg.includes('circle cx="12" cy="12" r="10"'), 'Portfolio SVG must be distinct Globe icon');
-  console.log('✅ Test 3 Passed: Vector SVGs for X, Instagram, Facebook, GitHub, Portfolio generated cleanly with distinct shapes.\n');
+  assert(portfolioGithubIoSvg.includes('circle cx="12" cy="12" r="10"'), 'Portfolio on github.io must STILL be distinct Globe icon, not GitHub icon');
+  assert(!portfolioGithubIoSvg.includes('path d="M15 22v-4'), 'Portfolio on github.io must NOT render GitHub icon');
+  console.log('✅ Test 3 Passed: Vector SVGs for Portfolio (including github.io), GitHub, X, Instagram, Facebook generated cleanly.\n');
 
   // ---------------------------------------------------------
   // TEST 4: Special Characters & Accents (UTF-8 preservation)
