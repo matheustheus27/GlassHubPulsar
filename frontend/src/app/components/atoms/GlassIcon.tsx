@@ -11,6 +11,7 @@ export type GlassIconName =
   | 'twitter'
   | 'instagram'
   | 'facebook'
+  | 'link'
   | 'ats'
   | 'ai'
   | 'pdf'
@@ -45,7 +46,7 @@ export const GlassIcon: React.FC<GlassIconProps> = ({
   }[glow];
 
   const renderSvg = () => {
-    switch (name.toLowerCase()) {
+    switch (String(name || '').toLowerCase()) {
       case 'email':
       case '✉️':
         return (
@@ -91,6 +92,35 @@ export const GlassIcon: React.FC<GlassIconProps> = ({
           </svg>
         );
 
+      case 'x':
+      case 'twitter':
+      case '𝕏':
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
+            <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
+          </svg>
+        );
+
+      case 'instagram':
+      case '📸':
+      case '📷':
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+            <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+          </svg>
+        );
+
+      case 'facebook':
+      case '📘':
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+          </svg>
+        );
+
       case 'portfolio':
       case '🌐':
         return (
@@ -101,13 +131,12 @@ export const GlassIcon: React.FC<GlassIconProps> = ({
           </svg>
         );
 
-      case 'x':
-      case 'twitter':
-      case '𝕏':
+      case 'link':
+      case '🔗':
         return (
           <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
-            <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
           </svg>
         );
 
@@ -132,7 +161,9 @@ export const GlassIcon: React.FC<GlassIconProps> = ({
       default:
         return (
           <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+            <path d="M2 12h20" />
           </svg>
         );
     }

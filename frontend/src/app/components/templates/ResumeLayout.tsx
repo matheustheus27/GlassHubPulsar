@@ -39,9 +39,9 @@ export const ResumeLayout: React.FC<ResumeLayoutProps> = ({
     ...(net.portfolio?.url ? [{ title: net.portfolio.name || 'Portfólio', link: net.portfolio.url, icon: net.portfolio.icon || '🌐' }] : []),
     ...(net.linkedin?.url ? [{ title: net.linkedin.name || 'LinkedIn', link: net.linkedin.url, icon: net.linkedin.icon || '💼' }] : []),
     ...(net.github?.url ? [{ title: net.github.name || 'GitHub', link: net.github.url, icon: net.github.icon || '🐙' }] : []),
-    ...((net.x?.url || net.twitter?.url) ? [{ title: net.x?.name || net.twitter?.name || 'X', link: net.x?.url || net.twitter?.url, icon: net.x?.icon || net.twitter?.icon || '𝕏' }] : []),
-    ...(net.instagram?.url ? [{ title: net.instagram.name || 'Instagram', link: net.instagram.url, icon: net.instagram.icon || '📷' }] : []),
-    ...(net.facebook?.url ? [{ title: net.facebook.name || 'Facebook', link: net.facebook.url, icon: net.facebook.icon || '📘' }] : [])
+    ...((net.x?.url || net.twitter?.url) ? [{ title: net.x?.name || net.twitter?.name || 'X', link: net.x?.url || net.twitter?.url, icon: net.x?.icon || net.twitter?.icon || 'x' }] : []),
+    ...(net.instagram?.url ? [{ title: net.instagram.name || 'Instagram', link: net.instagram.url, icon: net.instagram.icon || 'instagram' }] : []),
+    ...(net.facebook?.url ? [{ title: net.facebook.name || 'Facebook', link: net.facebook.url, icon: net.facebook.icon || 'facebook' }] : [])
   ];
 
   const isLight = styles?.theme === 'light';

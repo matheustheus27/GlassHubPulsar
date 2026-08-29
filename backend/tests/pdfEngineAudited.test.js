@@ -238,15 +238,27 @@ async function runPdfEngineAuditedTests() {
   const emailItem = { title: "user@test.com", link: "mailto:user@test.com", icon: "email" };
   const phoneItem = { title: "+55 11 99999-9999", link: "tel:5511999999999", icon: "phone" };
   const githubItem = { title: "GitHub", link: "https://github.com/test", icon: "github" };
+  const xItem = { title: "X", link: "https://x.com/matheustheus27", icon: "x" };
+  const instagramItem = { title: "Instagram", link: "https://instagram.com/matheustheus27", icon: "instagram" };
+  const facebookItem = { title: "Facebook", link: "https://facebook.com/matheustheus27", icon: "facebook" };
+  const portfolioItem = { title: "Portfolio", link: "https://matheustheus27.dev", icon: "portfolio" };
 
   const emailSvg = ContactLinkOptimizer.getSvgIcon(emailItem);
   const phoneSvg = ContactLinkOptimizer.getSvgIcon(phoneItem);
   const githubSvg = ContactLinkOptimizer.getSvgIcon(githubItem);
+  const xSvg = ContactLinkOptimizer.getSvgIcon(xItem);
+  const instagramSvg = ContactLinkOptimizer.getSvgIcon(instagramItem);
+  const facebookSvg = ContactLinkOptimizer.getSvgIcon(facebookItem);
+  const portfolioSvg = ContactLinkOptimizer.getSvgIcon(portfolioItem);
 
   assert(emailSvg.includes('<svg') && emailSvg.includes('viewBox="0 0 24 24"'), 'Email SVG must be valid');
   assert(phoneSvg.includes('<svg') && phoneSvg.includes('viewBox="0 0 24 24"'), 'Phone SVG must be valid');
   assert(githubSvg.includes('<svg') && githubSvg.includes('viewBox="0 0 24 24"'), 'GitHub SVG must be valid');
-  console.log('✅ Test 3 Passed: Vector SVGs generate cleanly with standard 24x24 viewBoxes.\n');
+  assert(xSvg.includes('<path d="M4 4l11.733'), 'X SVG must be distinct X icon');
+  assert(instagramSvg.includes('rect') && instagramSvg.includes('rx="5"'), 'Instagram SVG must be distinct Instagram icon');
+  assert(facebookSvg.includes('<path d="M18 2h-3'), 'Facebook SVG must be distinct Facebook icon');
+  assert(portfolioSvg.includes('circle cx="12" cy="12" r="10"'), 'Portfolio SVG must be distinct Globe icon');
+  console.log('✅ Test 3 Passed: Vector SVGs for X, Instagram, Facebook, GitHub, Portfolio generated cleanly with distinct shapes.\n');
 
   // ---------------------------------------------------------
   // TEST 4: Special Characters & Accents (UTF-8 preservation)

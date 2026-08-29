@@ -24,9 +24,9 @@ export function buildResumePayload(
   if (networking.linkedin?.url) networkContacts.push({ title: networking.linkedin.name || 'LinkedIn', link: networking.linkedin.url, icon: networking.linkedin.icon || '💼' });
   if (networking.github?.url) networkContacts.push({ title: networking.github.name || 'GitHub', link: networking.github.url, icon: networking.github.icon || '🐙' });
   const xContact = networking.x || networking.twitter;
-  if (xContact?.url) networkContacts.push({ title: xContact.name || 'X', link: xContact.url, icon: xContact.icon || '𝕏' });
-  if (networking.instagram?.url) networkContacts.push({ title: networking.instagram.name || 'Instagram', link: networking.instagram.url, icon: networking.instagram.icon || '📷' });
-  if (networking.facebook?.url) networkContacts.push({ title: networking.facebook.name || 'Facebook', link: networking.facebook.url, icon: networking.facebook.icon || '📘' });
+  if (xContact?.url) networkContacts.push({ title: xContact.name || 'X', link: xContact.url, icon: xContact.icon || 'x' });
+  if (networking.instagram?.url) networkContacts.push({ title: networking.instagram.name || 'Instagram', link: networking.instagram.url, icon: networking.instagram.icon || 'instagram' });
+  if (networking.facebook?.url) networkContacts.push({ title: networking.facebook.name || 'Facebook', link: networking.facebook.url, icon: networking.facebook.icon || 'facebook' });
 
   // Custom networking keys
   for (const [key, val] of Object.entries(networking as Record<string, any>)) {
