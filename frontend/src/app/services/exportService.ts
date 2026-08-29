@@ -51,18 +51,24 @@ export async function exportDocumentToPDF({
     .trim()
     .replace(/[^a-zA-Z0-9\s_-]/g, '');
 
+  const toTitleCase = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
   const parts = clean.split(/\s+/).filter(Boolean);
-  let namePart = 'CURRICULO';
+  let namePart = 'Candidato';
   if (parts.length === 1) {
-    namePart = parts[0].toUpperCase();
+    namePart = toTitleCase(parts[0]);
   } else if (parts.length >= 2) {
-    const firstName = parts[0].toUpperCase();
-    const lastName = parts[parts.length - 1].toUpperCase();
+    const firstName = toTitleCase(parts[0]);
+    const lastName = toTitleCase(parts[parts.length - 1]);
     namePart = `${firstName}_${lastName}`;
   }
 
   const cleanLang = (lang || 'pt-BR').trim();
-  const fileName = `${namePart}-${cleanLang}.pdf`;
+  const isEn = cleanLang.toLowerCase().startsWith("en");
+  const isEs = cleanLang.toLowerCase().startsWith("es");
+  const prefix = isEn ? "Resume" : (isEs ? "Curriculum" : "Currículo");
+
+  const fileName = `${prefix}_${namePart}_${cleanLang}.pdf`;
 
   // Trigger browser download
   const link = document.createElement("a");

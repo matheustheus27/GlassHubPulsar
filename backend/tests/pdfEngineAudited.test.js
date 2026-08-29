@@ -70,19 +70,19 @@ async function runPdfEngineAuditedTests() {
   console.log('--- TEST 2: Full 9-Year Senior Multi-Page Resume & Section Splitting ---');
   const fullSeniorResume = {
     personalDetails: {
-      name: "MATHEUS THIAGO DE SOUZA FERREIRA",
+      name: "ALEXANDRE DA SILVA SANTOS",
       title: "DESENVOLVEDOR DE SOFTWARE",
-      location: { location: "Ribeirão das Neves, MG", icon: "📍" },
+      location: { location: "São Paulo, SP", icon: "📍" },
       contact: {
-        email: { email: "matheustheus27@gmail.com", icon: "✉️" },
-        phone: { phone: "+55 (31) 99150-4604", icon: "📞" },
+        email: { email: "alexandre.silva@exemplo.com", icon: "✉️" },
+        phone: { phone: "+55 (11) 98765-4321", icon: "📞" },
         networking: {
-          portfolio: { name: "Portfolio", url: "https://matheustheus27.dev" },
-          linkedin: { name: "LinkedIn", url: "https://linkedin.com/in/matheustheus27" },
-          github: { name: "GitHub", url: "https://github.com/matheustheus27" },
-          x: { name: "X", url: "https://x.com/matheustheus27" },
-          instagram: { name: "Instagram", url: "https://instagram.com/matheustheus27" },
-          facebook: { name: "Facebook", url: "https://facebook.com/matheustheus27" }
+          portfolio: { name: "Portfolio", url: "https://alexandresilva.dev" },
+          linkedin: { name: "LinkedIn", url: "https://linkedin.com/in/alexandresilva" },
+          github: { name: "GitHub", url: "https://github.com/alexandresilva" },
+          x: { name: "X", url: "https://x.com/alexandresilva" },
+          instagram: { name: "Instagram", url: "https://instagram.com/alexandresilva" },
+          facebook: { name: "Facebook", url: "https://facebook.com/alexandresilva" }
         }
       }
     },
@@ -197,7 +197,7 @@ async function runPdfEngineAuditedTests() {
         },
         {
           title: "GlassHub EventHorizon",
-          link: "https://github.com/matheustheus27/GlassHubEventHorizon",
+          link: "https://github.com/alexandresilva/GlassHubEventHorizon",
           description: "C#, .NET 8, WPF, MVVM, Multi-threading, CLI Tools, Telemetria de Sistemas",
           bullets: [
             "Desenvolvimento de uma aplicação desktop de alta performance baseada em streams para compressão e extração especializada de grandes volumes de dados.",
@@ -238,10 +238,10 @@ async function runPdfEngineAuditedTests() {
   const emailItem = { title: "user@test.com", link: "mailto:user@test.com", icon: "email" };
   const phoneItem = { title: "+55 11 99999-9999", link: "tel:5511999999999", icon: "phone" };
   const githubItem = { title: "GitHub", link: "https://github.com/test", icon: "github" };
-  const xItem = { title: "X", link: "https://x.com/matheustheus27", icon: "x" };
-  const instagramItem = { title: "Instagram", link: "https://instagram.com/matheustheus27", icon: "instagram" };
-  const facebookItem = { title: "Facebook", link: "https://facebook.com/matheustheus27", icon: "facebook" };
-  const portfolioItem = { title: "Portfolio", link: "https://matheustheus27.dev", icon: "portfolio" };
+  const xItem = { title: "X", link: "https://x.com/alexandresilva", icon: "x" };
+  const instagramItem = { title: "Instagram", link: "https://instagram.com/alexandresilva", icon: "instagram" };
+  const facebookItem = { title: "Facebook", link: "https://facebook.com/alexandresilva", icon: "facebook" };
+  const portfolioItem = { title: "Portfolio", link: "https://alexandresilva.dev", icon: "portfolio" };
 
   const emailSvg = ContactLinkOptimizer.getSvgIcon(emailItem);
   const phoneSvg = ContactLinkOptimizer.getSvgIcon(phoneItem);
@@ -257,7 +257,7 @@ async function runPdfEngineAuditedTests() {
   assert(xSvg.includes('<path d="M4 4l11.733'), 'X SVG must be distinct X icon');
   assert(instagramSvg.includes('rect') && instagramSvg.includes('rx="5"'), 'Instagram SVG must be distinct Instagram icon');
   assert(facebookSvg.includes('<path d="M18 2h-3'), 'Facebook SVG must be distinct Facebook icon');
-  const portfolioGithubIoItem = { title: "Portfólio", link: "https://matheustheus27.github.io", icon: "portfolio" };
+  const portfolioGithubIoItem = { title: "Portfólio", link: "https://alexandresilva.github.io", icon: "portfolio" };
   const portfolioGithubIoSvg = ContactLinkOptimizer.getSvgIcon(portfolioGithubIoItem);
 
   assert(portfolioSvg.includes('circle cx="12" cy="12" r="10"'), 'Portfolio SVG must be distinct Globe icon');
@@ -307,7 +307,22 @@ async function runPdfEngineAuditedTests() {
   const minimalPages = (minimalHtml.match(/<div class="a4-page">/g) || []).length;
   assert.strictEqual(minimalPages, 1, 'Empty resume must render in 1 page');
   assert(minimalHtml.includes("ALEX SILVA"), "Must render candidate name");
-  console.log('✅ Test 5 Passed: Resumes with empty sections render reliably without throwing exceptions.\n');
+  // ---------------------------------------------------------
+  // TEST 6: Standardized PDF Filename & ATS Scorer Normalization
+  // ---------------------------------------------------------
+  console.log('--- TEST 6: Standardized PDF Filename & ATS Normalization ---');
+  const analyticsWorker = require('../workers/analyticsWorker');
+
+  const atsDoc = analyticsWorker.normalizeCandidateDoc(fullSeniorResume);
+  assert.strictEqual(atsDoc.name, 'ALEXANDRE DA SILVA SANTOS', 'Candidate name must be extracted');
+  assert.strictEqual(atsDoc.title, 'DESENVOLVEDOR DE SOFTWARE', 'Candidate title must be DESENVOLVEDOR DE SOFTWARE');
+  assert(atsDoc.summary.length > 100, 'Summary must be normalized');
+
+  const atsScore = analyticsWorker.calculateHeuristicScore(fullSeniorResume, 'pt-BR');
+  assert(atsScore.overallScore >= 80, `Full senior resume should score >= 80 (got ${atsScore.overallScore})`);
+  assert(!atsScore.summary.includes('Adicione resumo profissional'), 'Must NOT report missing summary when present');
+  assert(!JSON.stringify(atsScore).includes("Garanta que o título 'alexandre da silva"), 'Must NOT confuse name with title');
+  console.log('✅ Test 6 Passed: PDF filename and ATS Normalization verified.\n');
 
   console.log('======================================================');
   console.log('🎉 ALL AUDITED PDF ENGINE TESTS PASSED (100% SUCCESS)');

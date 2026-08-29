@@ -10,15 +10,15 @@ async function runPdfWorkerE2ETests() {
 
   const mockResumeData = {
     personalDetails: {
-      name: 'MATHEUS THIAGO DE SOUZA FERREIRA',
+      name: 'ALEXANDRE DA SILVA SANTOS',
       title: 'DESENVOLVEDOR DE SOFTWARE',
-      location: 'Belo Horizonte, MG',
+      location: 'São Paulo, SP',
       contact: {
-        email: { email: 'matheus.ferreira@example.com' },
-        phone: { phone: '+55 (31) 99999-8888' },
+        email: { email: 'alexandre.silva@exemplo.com' },
+        phone: { phone: '+55 (11) 98765-4321' },
         networking: {
-          linkedin: { name: 'LinkedIn', url: 'https://linkedin.com/in/matheustheus27' },
-          github: { name: 'GitHub', url: 'https://github.com/matheustheus27' }
+          linkedin: { name: 'LinkedIn', url: 'https://linkedin.com/in/alexandresilva' },
+          github: { name: 'GitHub', url: 'https://github.com/alexandresilva' }
         }
       }
     },
@@ -73,7 +73,7 @@ async function runPdfWorkerE2ETests() {
         {
           title: 'GlassHub Nebula',
           role: 'Arquiteto de Software',
-          link: 'https://github.com/matheustheus27/GlassHubNebula',
+          link: 'https://github.com/alexandresilva/GlassHubNebula',
           bullets: [
             'Plataforma completa de gestão com arquitetura orientada a microsserviços.'
           ]
@@ -90,8 +90,8 @@ async function runPdfWorkerE2ETests() {
     jobId,
     type: 'resume',
     document: mockResumeData,
-    candidateName: 'MATHEUS THIAGO DE SOUZA FERREIRA',
-    fileName: 'MATHEUS_FERREIRA-pt-BR.pdf',
+    candidateName: 'ALEXANDRE DA SILVA SANTOS',
+    fileName: 'Currículo_Alexandre_Santos_pt-BR.pdf',
     language: 'pt-BR'
   });
 
@@ -121,7 +121,7 @@ async function runPdfWorkerE2ETests() {
   console.log('--------------------------------------------------');
 
   const requiredKeywords = [
-    'MATHEUS',
+    'ALEXANDRE',
     'TEKNISA',
     'AZAPFY',
     'PHP',
@@ -148,8 +148,8 @@ async function runPdfWorkerE2ETests() {
       jobId: bullJobId,
       type: 'resume',
       document: mockResumeData,
-      candidateName: 'MATHEUS THIAGO DE SOUZA FERREIRA',
-      fileName: 'MATHEUS_FERREIRA-pt-BR.pdf',
+      candidateName: 'ALEXANDRE DA SILVA SANTOS',
+      fileName: 'Currículo_Alexandre_Santos_pt-BR.pdf',
       language: 'pt-BR'
     }
   });

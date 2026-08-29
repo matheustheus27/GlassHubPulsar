@@ -8,32 +8,38 @@ async function runPaginationAndVisualTests() {
   console.log('\n=== RUNNING PAGINATION, FILENAME & VECTOR SVG TESTS ===\n');
 
   // --- TEST 1: Standardized PDF Filename Formatting ---
-  function formatPdfFileName(candidateName = "CURRICULO", language = "pt-BR") {
+  function formatPdfFileName(candidateName = "Candidato", language = "pt-BR") {
     const clean = String(candidateName)
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .trim()
       .replace(/[^a-zA-Z0-9\s_-]/g, "");
 
+    const toTitleCase = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
     const parts = clean.split(/\s+/).filter(Boolean);
-    let namePart = "CURRICULO";
+    let namePart = "Candidato";
     if (parts.length === 1) {
-      namePart = parts[0].toUpperCase();
+      namePart = toTitleCase(parts[0]);
     } else if (parts.length >= 2) {
-      const firstName = parts[0].toUpperCase();
-      const lastName = parts[parts.length - 1].toUpperCase();
+      const firstName = toTitleCase(parts[0]);
+      const lastName = toTitleCase(parts[parts.length - 1]);
       namePart = `${firstName}_${lastName}`;
     }
 
     const cleanLang = (language || "pt-BR").trim();
-    return `${namePart}-${cleanLang}.pdf`;
+    const isEn = cleanLang.toLowerCase().startsWith("en");
+    const isEs = cleanLang.toLowerCase().startsWith("es");
+    const prefix = isEn ? "Resume" : (isEs ? "Curriculum" : "Currículo");
+
+    return `${prefix}_${namePart}_${cleanLang}.pdf`;
   }
 
-  assert.strictEqual(formatPdfFileName("Alexandre Silva dos Santos", "pt-BR"), "ALEXANDRE_SANTOS-pt-BR.pdf");
-  assert.strictEqual(formatPdfFileName("Alexandre Santos", "en-US"), "ALEXANDRE_SANTOS-en-US.pdf");
-  assert.strictEqual(formatPdfFileName("John Doe", "es-ES"), "JOHN_DOE-es-ES.pdf");
-  assert.strictEqual(formatPdfFileName("Ana", "pt-BR"), "ANA-pt-BR.pdf");
-  console.log('✅ Test 1 Passed: PDF filename formatted as NAME_LASTNAME-LANG.pdf');
+  assert.strictEqual(formatPdfFileName("Alexandre Silva dos Santos", "pt-BR"), "Currículo_Alexandre_Santos_pt-BR.pdf");
+  assert.strictEqual(formatPdfFileName("Alexandre Santos", "en-US"), "Resume_Alexandre_Santos_en-US.pdf");
+  assert.strictEqual(formatPdfFileName("John Doe", "es-ES"), "Curriculum_John_Doe_es-ES.pdf");
+  assert.strictEqual(formatPdfFileName("Bernardo Ferreira", "pt-BR"), "Currículo_Bernardo_Ferreira_pt-BR.pdf");
+  console.log('✅ Test 1 Passed: PDF filename formatted as PREFIX_Name_LastName_LANG.pdf');
 
   // --- TEST 2: Vector SVGs for Facebook, X, Instagram, LinkedIn, GitHub ---
   const facebookSvg = ContactLinkOptimizer.getSvgIcon({ title: 'Facebook', link: 'https://facebook.com/alexandre-dev', icon: '🔗' });

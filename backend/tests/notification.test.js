@@ -10,11 +10,11 @@ async function runNotificationTests() {
   const pdfNotif = await notificationService.createNotification({
     userId: testUserId,
     title: 'Exportação de PDF Concluída',
-    message: 'Seu currículo "MATHEUS_FERREIRA-pt-BR.pdf" está pronto para download.',
+    message: 'Seu currículo "Currículo_Alexandre_Santos_pt-BR.pdf" está pronto para download.',
     type: 'PDF_READY',
     data: {
       jobId: 'job_pdf_999',
-      fileName: 'MATHEUS_FERREIRA-pt-BR.pdf',
+      fileName: 'Currículo_Alexandre_Santos_pt-BR.pdf',
       downloadUrl: '/api/pdf/download/job_pdf_999'
     }
   });

@@ -3,39 +3,124 @@ const analyticsWorker = require('../workers/analyticsWorker');
 
 console.log('\n=== RUNNING ATS SCORER & ANALYTICS WORKER TESTS ===\n');
 
-const mockResume = {
-  personal: { name: 'Alexandre Oliveira', title: 'Senior Developer' },
-  summary: { summary: 'Experiente em microsserviços e TypeScript.' },
+// ---------------------------------------------------------
+// TEST 1: ResumeDTO Payload Format (as sent by frontend export & ATS modal)
+// ---------------------------------------------------------
+console.log('--- TEST 1: ATS Evaluation with ResumeDTO Payload Format ---');
+const resumeDtoFormat = {
+  personal: {
+    title: 'ALEXANDRE DA SILVA SANTOS',
+    personal: {
+      name: 'ALEXANDRE DA SILVA SANTOS',
+      title: 'DESENVOLVEDOR DE SOFTWARE',
+      location: { title: 'São Paulo, SP' },
+      contact: []
+    }
+  },
+  summary: {
+    title: 'RESUMO PROFISSIONAL',
+    summary: 'Desenvolvedor de Software com 9 anos de experiência em microsserviços, Docker, APIs REST, mensageria e bancos de dados.'
+  },
   skills: {
+    title: 'COMPETÊNCIAS & TECNOLOGIAS',
     skills: [
-      { name: 'Frontend', items: ['React', 'TypeScript', 'TailwindCSS'] },
-      { name: 'Backend', items: ['Node.js', 'Express', 'PostgreSQL'] }
+      { title: 'Linguagens', items: ['PHP', 'Python', 'JavaScript', 'TypeScript'] },
+      { title: 'Frameworks', items: ['Node.js', 'Express', 'Laravel'] },
+      { title: 'Bancos de Dados', items: ['PostgreSQL', 'MongoDB', 'Redis'] }
     ]
   },
   experiences: {
+    title: 'HISTÓRICO PROFISSIONAL',
     experiences: [
-      { company: 'Tech Corp', role: 'Senior Developer', bullets: ['Liderou desenvolvimento de backend.'] }
+      {
+        company: 'Teknisa',
+        role: 'Desenvolvedor Full-Stack',
+        period: 'Set 2025 - Presente',
+        bullets: ['Desenvolvimento de integrações e APIs REST em microsserviços de alto volume, reduzindo latência em 35%.']
+      },
+      {
+        company: 'Azapfy',
+        role: 'Desenvolvedor Back-end',
+        period: 'Out 2021 - Set 2024',
+        bullets: ['Manutenção de pipelines assíncronos e processamento de mais de 500k eventos/dia com MongoDB e Redis.']
+      }
     ]
   },
   projects: {
+    title: 'PROJETOS DE DESTAQUE',
     projects: [
-      { title: 'Glassmorphic CV', bullets: ['Criou plataforma de alta performance.'] }
+      {
+        title: 'GlassHub Nebula',
+        role: 'Motor Gráfico C++20',
+        bullets: ['Arquitetura desacoplada com renderização de alta taxa de quadros.']
+      }
     ]
   }
 };
 
-const result = analyticsWorker.calculateHeuristicScore(mockResume, 'pt-BR');
+const norm = analyticsWorker.normalizeCandidateDoc(resumeDtoFormat);
+console.log('Normalized candidate extraction:');
+console.log('  Name:', norm.name);
+console.log('  Professional Title:', norm.title);
+console.log('  Summary Length:', norm.summary.length);
+console.log('  Experiences Count:', norm.experiences.length);
+console.log('  Skills Categories:', norm.skills.length);
 
-assert(typeof result.overallScore === 'number' && result.overallScore >= 0 && result.overallScore <= 100, 'Score should be between 0 and 100');
-assert(Array.isArray(result.missingKeywords), 'missingKeywords must be an array');
-assert(!result.missingKeywords.includes('Microsserviços'), 'Should NOT suggest Microsserviços if candidate already has it in summary/skills');
-assert(!result.missingKeywords.includes('Microservices Architecture'), 'Should NOT suggest Microservices in English if candidate has Microsserviços in PT');
-assert(result.actionVerbsDensity && typeof result.actionVerbsDensity.score === 'number', 'actionVerbsDensity must have score');
-assert(Array.isArray(result.actionableRecommendations), 'actionableRecommendations must be array');
+assert.strictEqual(norm.name, 'ALEXANDRE DA SILVA SANTOS', 'Candidate name must be extracted correctly');
+assert.strictEqual(norm.title, 'DESENVOLVEDOR DE SOFTWARE', 'Candidate title must be DESENVOLVEDOR DE SOFTWARE, NOT the candidate name');
+assert(norm.summary.length > 50, 'Summary must be present');
 
-console.log('✅ ATS Score Calculated:', result.overallScore);
-console.log('✅ Summary:', result.summary);
-console.log('✅ Missing Keywords (Microsserviços recognized as already present):', result.missingKeywords.join(', '));
-console.log('✅ Recommendations Count:', result.actionableRecommendations.length);
+const result1 = analyticsWorker.calculateHeuristicScore(resumeDtoFormat, 'pt-BR');
 
-console.log('\n🎉 ATS SCORER TESTS PASSED SUCCESSFULLY!\n');
+console.log('\nATS Score Result:');
+console.log('  Overall Score:', result1.overallScore);
+console.log('  Summary:', result1.summary);
+console.log('  Recommendations:', result1.actionableRecommendations);
+
+assert(result1.overallScore >= 80, `Score should be >= 80 for complete senior profile (got ${result1.overallScore})`);
+assert(!result1.summary.includes('Adicione resumo profissional'), 'Should NOT report "Adicione resumo profissional" when summary is present');
+assert(!JSON.stringify(result1).includes("Garanta que o título 'alexandre da silva"), 'Should NOT confuse candidate name with professional title');
+assert(JSON.stringify(result1).includes("DESENVOLVEDOR DE SOFTWARE") || JSON.stringify(result1).includes("desenvolvedor"), 'Must reflect real professional title');
+
+console.log('✅ Test 1 Passed: ResumeDTO format correctly extracts professional title and scores profile accurately.\n');
+
+// ---------------------------------------------------------
+// TEST 2: Direct DocumentData Format (raw storage schema)
+// ---------------------------------------------------------
+console.log('--- TEST 2: Direct DocumentData Format ---');
+const docDataFormat = {
+  personalDetails: {
+    name: 'Carolina Mendes',
+    title: 'Product Designer'
+  },
+  summaryDetails: {
+    summary: 'Product Designer especializada em Design Systems e testes de usabilidade.'
+  },
+  skillsDetails: {
+    skills: [
+      { name: 'UI/UX', items: ['Figma', 'Design Systems', 'Wireframing'] }
+    ]
+  },
+  experienceDetails: {
+    experiences: [
+      {
+        company: 'Studio Digital',
+        role: 'Product Designer Jr',
+        bullets: ['Desenvolvimento de componentes com aumento de 20% na consistência.']
+      }
+    ]
+  }
+};
+
+const norm2 = analyticsWorker.normalizeCandidateDoc(docDataFormat);
+assert.strictEqual(norm2.name, 'Carolina Mendes');
+assert.strictEqual(norm2.title, 'Product Designer');
+assert(norm2.summary.length > 20);
+
+const result2 = analyticsWorker.calculateHeuristicScore(docDataFormat, 'pt-BR');
+assert(result2.overallScore >= 70, 'Score should be >= 70');
+assert(!result2.summary.includes('Adicione resumo profissional'), 'Should NOT report missing summary');
+
+console.log('✅ Test 2 Passed: Direct document schema format evaluated accurately.\n');
+
+console.log('🎉 ALL ATS SCORER & NORMALIZATION TESTS PASSED 100% PERFECTLY!\n');

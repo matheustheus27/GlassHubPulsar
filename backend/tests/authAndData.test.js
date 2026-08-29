@@ -38,7 +38,7 @@ async function runAuthAndDataResilienceTests() {
 
   const testEmail = `candidate_${Date.now()}@glasshub.com`;
   const testPassword = 'StrongPassword123!';
-  const testName = 'Matheus Test Candidate';
+  const testName = 'Alexandre Test Candidate';
 
   // 1. Test User Registration
   console.log('[1/5] Testing User Registration...');

@@ -79,7 +79,7 @@ function getPuppeteerLaunchOptions() {
   return options;
 }
 
-function formatPdfFileName(candidateName = "Curriculo", language = "pt-BR") {
+function formatPdfFileName(candidateName = "Candidato", language = "pt-BR") {
   const clean = String(candidateName)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -89,7 +89,7 @@ function formatPdfFileName(candidateName = "Curriculo", language = "pt-BR") {
   const toTitleCase = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
   const parts = clean.split(/\s+/).filter(Boolean);
-  let namePart = "Curriculo";
+  let namePart = "Candidato";
   if (parts.length === 1) {
     namePart = toTitleCase(parts[0]);
   } else if (parts.length >= 2) {
@@ -99,7 +99,11 @@ function formatPdfFileName(candidateName = "Curriculo", language = "pt-BR") {
   }
 
   const cleanLang = (language || "pt-BR").trim();
-  return `${namePart}-${cleanLang}.pdf`;
+  const isEn = cleanLang.toLowerCase().startsWith("en");
+  const isEs = cleanLang.toLowerCase().startsWith("es");
+  const prefix = isEn ? "Resume" : (isEs ? "Curriculum" : "Currículo");
+
+  return `${prefix}_${namePart}_${cleanLang}.pdf`;
 }
 
 /**
