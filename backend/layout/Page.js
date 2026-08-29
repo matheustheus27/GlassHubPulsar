@@ -1,82 +1,82 @@
+/**
+ * Page
+ * 
+ * Represents a single physical A4 page in the PDF layout.
+ * Organizes content into discrete, structured card containers.
+ */
 class Page {
     constructor(maxHeight = 1000, initialUsedHeight = 0) {
-        // Useful page height (A4 minus margins)
         this.maxHeight = maxHeight;
-
-        // Currently used height (including header on page 1)
         this.usedHeight = initialUsedHeight;
-
-        // Page sections
-        this.sections = [];
+        this.cards = []; // Array of { type, title, blocks: [] }
     }
 
     /**
-     * Check if a block fits on the page.
-     * @param {number} height
-     * @param {number} extraHeight
-     * @returns {boolean}
+     * Legacy getter for backward compatibility with tests accessing page.sections
      */
-    canFit(height, extraHeight = 0) {
-        return this.usedHeight + height + extraHeight <= this.maxHeight;
-    }
-
-    getLastSectionType() {
-        return this.sections.length > 0 ? this.sections[this.sections.length - 1].type : null;
-    }
-
-    /**
-     * Add a section with total consumed height
-     * @param {Object} section
-     * @param {number} consumedHeight
-     */
-    addSection(section, consumedHeight = null) {
-        this.sections.push(section);
-        this.usedHeight += (consumedHeight !== null ? consumedHeight : section.height);
+    get sections() {
+        const flat = [];
+        for (const card of this.cards) {
+            for (const b of card.blocks) {
+                flat.push(b);
+            }
+        }
+        return flat;
     }
 
     /**
-     * Remove the last added section.
+     * Check if a block + overhead fits on this page
      */
-    removeLastSection() {
-        const removed = this.sections.pop();
+    canFit(blockHeight, overhead = 0) {
+        return (this.usedHeight + blockHeight + overhead) <= this.maxHeight;
+    }
 
-        if (removed) {
-            this.usedHeight -= removed.height;
+    /**
+     * Add a block to a specific section card on this page
+     */
+    addBlockToCard(sectionType, sectionTitle, block, consumedHeight) {
+        let currentCard = this.cards.length > 0 ? this.cards[this.cards.length - 1] : null;
+
+        if (!currentCard || currentCard.type !== sectionType) {
+            currentCard = {
+                type: sectionType,
+                title: sectionTitle,
+                blocks: []
+            };
+            this.cards.push(currentCard);
         }
 
-        return removed;
+        currentCard.blocks.push(block);
+        this.usedHeight += consumedHeight;
     }
 
     /**
-     * Remaining space.
+     * Remaining height in pixels
      */
     remainingHeight() {
-        return this.maxHeight - this.usedHeight;
+        return Math.max(0, this.maxHeight - this.usedHeight);
     }
 
     /**
-     * Is page empty?
+     * Is the page empty (no cards)?
      */
     isEmpty() {
-        return this.sections.length === 0;
+        return this.cards.length === 0;
     }
 
     /**
-     * Reset the page.
+     * Total count of blocks across all cards
      */
-    clear() {
-        this.sections = [];
-        this.usedHeight = 0;
+    get totalBlocks() {
+        return this.cards.reduce((acc, card) => acc + card.blocks.length, 0);
     }
 
-    /**
-     * JSON used by ResumeBuilder.
-     */
     toJSON() {
         return {
             usedHeight: this.usedHeight,
             remainingHeight: this.remainingHeight(),
-            sections: this.sections
+            cardsCount: this.cards.length,
+            cards: this.cards
         };
     }
 }

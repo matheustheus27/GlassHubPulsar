@@ -387,7 +387,9 @@ Set 2025 - Presente
 }
 
 if (require.main === module) {
-    runDeterministicTests().catch(err => {
+    runDeterministicTests().then(() => {
+        process.exit(0);
+    }).catch(err => {
         console.error('Test execution failed:', err);
         process.exit(1);
     });

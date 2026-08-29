@@ -72,7 +72,10 @@ class MessageBroker {
           try {
             await handler(payload);
           } catch (err) {
-            logger.error(`[MessageBroker] InMemory handler error for "${workerType}":`, err.message);
+            logger.error(`[MessageBroker] InMemory handler error for "${workerType}":`, {
+              error: err.message,
+              stack: err.stack
+            });
           }
         }
       });

@@ -1,13 +1,28 @@
 /**
  * PDF Worker
  * Handles background PDF rendering for user resumes and generates Hybrid Executive System Status Reports.
+ * Ensures textual, selectable, vector PDF output compatible with ATS.
  */
-let puppeteer = null;
+let puppeteer;
 try {
   puppeteer = require('puppeteer');
-} catch (e) {
-  // Graceful fallback for non-browser environments
+} catch (error) {
+  const logger = require('../utils/logger');
+  logger.error('[PDFWorker] Puppeteer could not be loaded', {
+    error: error.message,
+    stack: error.stack
+  });
+  throw error;
 }
+
+let pdfParse;
+try {
+  pdfParse = require('pdf-parse');
+} catch (error) {
+  const logger = require('../utils/logger');
+  logger.warn('[PDFWorker] pdf-parse library not loaded:', error.message);
+}
+
 const fs = require('fs');
 const logger = require('../utils/logger');
 const queueManager = require('../queues/queueManager');
@@ -16,7 +31,21 @@ const sseController = require('../controllers/SSEController');
 const ResumeBuilder = require('../services/ResumeBuilderService');
 const CoverBuilder = require('../services/CoverBuilderService');
 
+// In-memory store for generated PDFs with TTL protection
 const pdfStore = new Map();
+const PDF_STORE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function prunePdfStore() {
+  const now = Date.now();
+  for (const [id, entry] of pdfStore.entries()) {
+    if (now - entry.timestamp > PDF_STORE_TTL_MS) {
+      pdfStore.delete(id);
+    }
+  }
+}
+
+// Run cleanup periodically every 5 minutes
+setInterval(prunePdfStore, 5 * 60 * 1000).unref();
 
 function getPuppeteerLaunchOptions() {
   const options = {
@@ -28,7 +57,8 @@ function getPuppeteerLaunchOptions() {
       '--disable-gpu',
       '--no-first-run',
       '--no-zygote',
-      '--single-process'
+      '--single-process',
+      '--font-render-hinting=none'
     ]
   };
 
@@ -73,94 +103,172 @@ function formatPdfFileName(candidateName = "Curriculo", language = "pt-BR") {
 }
 
 /**
+ * Validates extractable text in the generated PDF buffer for ATS compliance.
+ */
+async function validatePdfText(pdfBuffer) {
+  if (!pdfBuffer || pdfBuffer.length === 0) {
+    return { valid: false, reason: 'PDF buffer is empty' };
+  }
+
+  if (!pdfParse) {
+    return {
+      valid: pdfBuffer.length > 1000,
+      textLength: 0,
+      preview: 'pdf-parse unavailable, buffer size verified'
+    };
+  }
+
+  try {
+    const data = await pdfParse(pdfBuffer);
+    const text = data.text || '';
+    const cleanText = text.trim();
+
+    if (cleanText.length < 20) {
+      return {
+        valid: false,
+        textLength: cleanText.length,
+        preview: cleanText.slice(0, 500),
+        reason: 'PDF contains no extractable text'
+      };
+    }
+
+    return {
+      valid: true,
+      textLength: cleanText.length,
+      preview: cleanText.slice(0, 500),
+      pages: data.numpages || 1
+    };
+  } catch (err) {
+    return {
+      valid: false,
+      reason: `Failed to extract text from PDF: ${err.message}`
+    };
+  }
+}
+
+/**
  * Intelligent A4 Vector PDF Pagination Engine
  * Evaluates rendered element heights in Puppeteer DOM, injects page breaks
  * without cutting cards, and adds section continuation headers (CONTINUAÇÃO).
+ * Generates true vector/textual PDF directly from Chromium layout engine.
  */
-async function generatePaginatedResumePdf(fullHtmlWithTailwind) {
+async function generatePaginatedResumePdf(fullHtmlWithTailwind, jobId = 'unknown') {
   const launchOpts = getPuppeteerLaunchOptions();
-  if (!launchOpts.args.includes('--font-render-hinting=none')) {
-    launchOpts.args.push('--font-render-hinting=none');
-  }
+
+  logger.info('[PDFWorker] Launching Chromium', {
+    jobId
+  });
+
+  logger.info('[PDFWorker] Chromium launch options', {
+    executablePath: launchOpts.executablePath || 'Puppeteer bundled Chromium',
+    headless: launchOpts.headless,
+    args: launchOpts.args
+  });
+
   const browser = await puppeteer.launch(launchOpts);
+  logger.info('[PDFWorker] Chromium launched', { jobId });
 
   try {
     const page = await browser.newPage();
 
-    // 1. Set exact A4 viewport (794x1123 @ scale 2 for crisp vector typography)
-    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 2 });
+    // 1. Set exact A4 viewport (deviceScaleFactor: 1 for standard crisp vector typography)
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
-    // 2. Set HTML content & wait for DOM (no external network needed — all self-contained)
-    await page.setContent(fullHtmlWithTailwind, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.evaluateHandle('document.fonts.ready');
+    // 2. Set HTML content & wait for DOM and network idle
+    await page.setContent(fullHtmlWithTailwind, {
+      waitUntil: ['domcontentloaded', 'networkidle0'],
+      timeout: 60000
+    });
 
-    // 3. Define A4 dimensions (297mm = ~1122.5px @ 96 DPI, padding 80px)
+    // 3. Wait for all fonts to finish loading
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
+
+    const fontStatus = await page.evaluate(() => ({
+      status: document.fonts.status,
+      fonts: Array.from(document.fonts).map(font => ({
+        family: font.family,
+        status: font.status
+      }))
+    }));
+    logger.info('[PDFWorker] Font status:', fontStatus);
+
+    // 4. Wait for all images/resources in the document to complete
+    await page.evaluate(async () => {
+      const images = Array.from(document.images);
+      await Promise.all(
+        images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => {
+            img.addEventListener('load', resolve, { once: true });
+            img.addEventListener('error', resolve, { once: true });
+          });
+        })
+      );
+    });
+
+    // 5. Ensure document contains real text before rendering PDF
+    const textStats = await page.evaluate(() => {
+      const bodyText = document.body?.innerText || '';
+      return {
+        textLength: bodyText.length,
+        textPreview: bodyText.slice(0, 500),
+        hasText: bodyText.trim().length > 0
+      };
+    });
+
+    if (!textStats.hasText) {
+      throw new Error('Document contains no text in DOM before PDF generation');
+    }
+
+    const domStats = await page.evaluate(() => ({
+      paragraphs: document.querySelectorAll('p').length,
+      headings: document.querySelectorAll('h1,h2,h3,h4,h5,h6').length,
+      listItems: document.querySelectorAll('li').length,
+      textNodes: (() => {
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        let count = 0;
+        let length = 0;
+        while (walker.nextNode()) {
+          const text = walker.currentNode.nodeValue?.trim();
+          if (text) {
+            count++;
+            length += text.length;
+          }
+        }
+        return { count, length };
+      })()
+    }));
+    logger.info('[PDFWorker] DOM text stats:', domStats);
+
+    // 6. Define A4 dimensions and calculate page breaks
     const A4_HEIGHT_PX = 1122.5;
     const PAGE_PADDING_Y_PX = 80;
     const USABLE_PAGE_HEIGHT = A4_HEIGHT_PX - PAGE_PADDING_Y_PX;
 
-    // 4. Execute DOM height evaluation and page break injection
-    await page.evaluate((maxPageHeight) => {
-      // Add global print-color-adjust and page break CSS rules
+    // 6. Register print styles for pristine page break handling
+    await page.evaluate(() => {
       const styleEl = document.createElement('style');
       styleEl.innerHTML = `
-        @page { size: A4; margin: 0; }
-        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        [data-printable-item] { break-inside: avoid; page-break-inside: avoid; }
-        .custom-page-break { break-before: page; page-break-before: always; }
+        @page { size: A4; margin: 0 !important; }
+        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        .a4-page { page-break-after: always !important; break-after: always !important; }
+        .a4-page:last-child { page-break-after: avoid !important; break-after: avoid !important; }
+        .glass-card { break-inside: avoid !important; page-break-inside: avoid !important; }
+        .item-block, .skill-group, .education-item, .experience-item, .project-item {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        [data-section-title], .section-title, h1, h2, h3 {
+          break-after: avoid !important;
+          page-break-after: avoid !important;
+        }
       `;
       document.head.appendChild(styleEl);
+    });
 
-      const sections = Array.from(document.querySelectorAll('[data-printable-section]'));
-      let currentAccumulatedHeight = 0;
-
-      sections.forEach((section) => {
-        const sectionTitleEl = section.querySelector('[data-section-title]');
-        const sectionTitleText = sectionTitleEl ? sectionTitleEl.innerText.trim() : '';
-        const items = Array.from(section.querySelectorAll('[data-printable-item]'));
-
-        if (items.length === 0) {
-          const blockHeight = section.offsetHeight;
-          if (currentAccumulatedHeight + blockHeight > maxPageHeight && currentAccumulatedHeight > 0) {
-            section.style.breakBefore = 'page';
-            currentAccumulatedHeight = blockHeight;
-          } else {
-            currentAccumulatedHeight += blockHeight;
-          }
-          return;
-        }
-
-        if (sectionTitleEl) {
-          currentAccumulatedHeight += sectionTitleEl.offsetHeight;
-        }
-
-        items.forEach((item) => {
-          const itemHeight = item.offsetHeight;
-
-          if (currentAccumulatedHeight + itemHeight > maxPageHeight && currentAccumulatedHeight > 0) {
-            const pageBreak = document.createElement('div');
-            pageBreak.className = 'custom-page-break';
-            pageBreak.style.breakBefore = 'page';
-            pageBreak.style.marginTop = '24px';
-
-            if (sectionTitleText) {
-              const contHeader = document.createElement('div');
-              contHeader.className = sectionTitleEl ? sectionTitleEl.className : 'section-title';
-              contHeader.innerText = `${sectionTitleText} (CONTINUAÇÃO)`;
-              contHeader.style.marginBottom = '16px';
-              pageBreak.appendChild(contHeader);
-            }
-
-            item.parentNode?.insertBefore(pageBreak, item);
-            currentAccumulatedHeight = itemHeight + (sectionTitleEl ? sectionTitleEl.offsetHeight : 0);
-          } else {
-            currentAccumulatedHeight += itemHeight;
-          }
-        });
-      });
-    }, USABLE_PAGE_HEIGHT);
-
-    // 5. Generate Vector PDF
+    // 7. Generate Vector/Textual PDF directly from Chromium DOM layout
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -180,12 +288,21 @@ class PDFWorker {
   }
 
   init() {
-    // Legacy BullMQ/Redis queue (backward compat for direct processJob calls)
+    // Legacy BullMQ/Redis queue
     queueManager.registerWorker('pdf', this.processJob.bind(this));
 
-    // RabbitMQ via MessageBroker (primary, with InMemory fallback)
+    // RabbitMQ / InMemory via MessageBroker
     const messageBroker = require('../messaging/MessageBroker');
-    messageBroker.consume('pdf.render', this.processJob.bind(this)).catch(err =>
+    logger.info('[PDFWorker] Registering consumer', { queue: 'pdf.render' });
+
+    messageBroker.consume('pdf.render', async (payload) => {
+      const jobId = payload?.jobId || payload?.id || 'unknown';
+      logger.info('[PDFWorker] Message received', {
+        queue: 'pdf.render',
+        jobId
+      });
+      return this.processJob(payload);
+    }).catch(err =>
       logger.warn('[PDFWorker] MessageBroker consume registration note:', err.message)
     );
 
@@ -193,7 +310,20 @@ class PDFWorker {
   }
 
   getPdf(id) {
-    return pdfStore.get(id);
+    const entry = pdfStore.get(id);
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > PDF_STORE_TTL_MS) {
+      pdfStore.delete(id);
+      return null;
+    }
+    return entry;
+  }
+
+  setPdf(id, data) {
+    pdfStore.set(id, {
+      ...data,
+      timestamp: Date.now()
+    });
   }
 
   generateSystemReportHtml(systemSnapshot, queues = {}, databaseLogs = [], datadog = {}) {
@@ -430,16 +560,20 @@ class PDFWorker {
   }
 
   async processJob(job) {
-    const { jobId = job.id, type, document, candidateName, isSystemReport, systemSnapshot, queues, databaseLogs, datadog } = job.data;
+    // Normalize input data whether it comes from BullMQ ({ id, data }) or MessageBroker ({ jobId, ... })
+    const data = (job && job.data) ? job.data : (job || {});
+    const jobId = data.jobId || job?.id || `pdf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const { type, document, candidateName, isSystemReport, systemSnapshot, queues, databaseLogs, datadog } = data;
     const startTime = Date.now();
 
     const docName = candidateName || document?.personalDetails?.name || document?.personal?.personal?.name || document?.personal?.name || "Curriculo";
     const docLang = document?.settings?.language || document?.language || "pt-BR";
     const fileName = formatPdfFileName(docName, docLang);
 
-    logger.info(`[PDFWorker] Starting PDF generation job [${jobId}] (${docName} - ${type || 'SystemReport'})`, {
+    logger.info('[PDFWorker] Starting PDF generation job', {
       jobId,
-      type,
+      type: type || (isSystemReport ? 'SystemReport' : 'resume'),
+      candidateName: docName,
       fileName,
       language: docLang,
       memory: process.memoryUsage().heapUsed
@@ -454,12 +588,7 @@ class PDFWorker {
     });
 
     try {
-      sseController.broadcast({
-        type: 'PDF_PROGRESS',
-        jobId,
-        progress: 60,
-        step: 'Compilando layout vetorial e calculando paginação inteligente...'
-      });
+      logger.info('[PDFWorker] Building resume HTML', { jobId });
 
       let html;
       if (isSystemReport) {
@@ -471,12 +600,60 @@ class PDFWorker {
         html = ResumeBuilder.build(document);
       }
 
-      const pdfBuffer = await generatePaginatedResumePdf(html);
+      logger.info('[PDFWorker] Resume HTML generated', {
+        jobId,
+        htmlLength: html?.length
+      });
+
+      sseController.broadcast({
+        type: 'PDF_PROGRESS',
+        jobId,
+        progress: 60,
+        step: 'Compilando layout vetorial e calculando paginação inteligente...'
+      });
+
+      const pdfBuffer = await generatePaginatedResumePdf(html, jobId);
+
+      logger.info('[PDFWorker] PDF buffer generated', {
+        jobId,
+        pdfSize: pdfBuffer.length
+      });
+
+      sseController.broadcast({
+        type: 'PDF_PROGRESS',
+        jobId,
+        progress: 80,
+        step: 'Executando motor de renderização vetorial e gerando PDF...'
+      });
+
+      // Validate extractable text in PDF for ATS compatibility
+      const validation = await validatePdfText(pdfBuffer);
+      if (!validation.valid) {
+        logger.error('[PDFWorker] PDF text validation failed', {
+          jobId,
+          reason: validation.reason,
+          textLength: validation.textLength
+        });
+        throw new Error(`PDF validation failed: ${validation.reason || 'No extractable text found'}`);
+      }
+
+      logger.info('[PDFWorker] PDF text validation passed', {
+        jobId,
+        textLength: validation.textLength,
+        preview: validation.preview?.slice(0, 150)
+      });
+
+      sseController.broadcast({
+        type: 'PDF_PROGRESS',
+        jobId,
+        progress: 95,
+        step: 'Validação textual e de compatibilidade ATS concluída com sucesso...'
+      });
 
       const downloadUrl = `/api/pdf/download/${jobId}`;
 
-      // Store in memory cache for user download
-      pdfStore.set(jobId, {
+      // Store in memory cache with TTL for user download
+      this.setPdf(jobId, {
         buffer: pdfBuffer,
         fileName,
         timestamp: Date.now()
@@ -486,15 +663,15 @@ class PDFWorker {
       metrics.recordLatency('pdfExportMs', durationMs);
       metrics.increment('pdfExports');
 
-      logger.info(`[PDFWorker] PDF job [${jobId}] completed successfully: ${fileName} (${pdfBuffer.length} bytes in ${durationMs}ms)`, {
+      logger.info('[PDFWorker] PDF job completed successfully', {
         jobId,
         fileName,
         pdfSize: pdfBuffer.length,
-        duration_ms: durationMs
+        durationMs
       });
 
       // Persist user notification in DB for cross-session access
-      const userId = job.data.userId;
+      const userId = data.userId;
       if (userId) {
         try {
           const NotificationService = require('../services/NotificationService');
@@ -512,7 +689,7 @@ class PDFWorker {
         }
       }
 
-      // SSE: Progress 100%
+      // SSE: Progress 100% only after full generation, validation, and cache storage
       sseController.broadcast({
         type: 'PDF_PROGRESS',
         jobId,

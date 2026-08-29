@@ -1,5 +1,6 @@
 import React, { CSSProperties } from 'react';
 import { processInHtml } from '../../services/tagProcessorService';
+import { GlassIcon } from '../atoms/GlassIcon';
 
 interface ProjectItemMetaProps {
   title: string;
@@ -22,20 +23,23 @@ export const ProjectItemMeta: React.FC<ProjectItemMetaProps> = ({
 }) => {
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex justify-between items-baseline flex-wrap gap-2">
-        <h3 style={style?.title} className="text-sm font-bold text-slate-100 flex items-center gap-2">
-          {title}
-          {link && (
-            <a
-              href={link}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
-            >
-              🔗 Link
-            </a>
-          )}
-        </h3>
+      <div className="flex justify-between items-center flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <h3 style={style?.title} className="text-sm font-bold text-slate-100 flex items-center gap-2">
+            <span>{title}</span>
+            {link && link !== '#' && (
+              <a
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-400/50 transition-all no-underline shadow-sm backdrop-blur-md"
+              >
+                <GlassIcon name="🔗" size={10} className="p-0.5" />
+                <span>Link</span>
+              </a>
+            )}
+          </h3>
+        </div>
       </div>
 
       <p style={style?.description} className="text-xs italic text-cyan-400 font-medium mb-1">

@@ -18,97 +18,91 @@ class ResumeBuilderService {
     const educationData = resume.educationDetails || resume.education || {};
     const projectsData = resume.projectDetails || resume.projects || {};
 
-    // 1. Feed the sequential block queue for virtual pixel calculation
-    const blocks = [];
-
-    if (summaryData.summary) {
-      blocks.push(BlockFactory.createSummary(summaryData));
-    }
-
-    const skillsList = skillsData.skills || (Array.isArray(skillsData) ? skillsData : []);
-    if (skillsList.length > 0) {
-      blocks.push(BlockFactory.createSkills({ skills: skillsList, title: skillsData.skillsTitle || skillsData.title || (cleanLang === 'pt' ? 'COMPETÊNCIAS & TECNOLOGIAS' : 'SKILLS & TECHNOLOGIES') }, settings));
-    }
-
-    const expList = experienceData.experiences || (Array.isArray(experienceData) ? experienceData : []);
-    if (Array.isArray(expList)) {
-      expList.forEach((exp) => {
-        blocks.push(BlockFactory.createExperience(exp, settings));
-      });
-    }
-
-    const eduList = educationData.educations || educationData.education || (Array.isArray(educationData) ? educationData : []);
-    if (Array.isArray(eduList)) {
-      eduList.forEach((edu) => {
-        blocks.push(BlockFactory.createEducation(edu, settings));
-      });
-    }
-
-    const projList = projectsData.projects || (Array.isArray(projectsData) ? projectsData : []);
-    if (Array.isArray(projList)) {
-      projList.forEach((proj) => {
-        blocks.push(BlockFactory.createProjects(proj));
-      });
-    }
-
-    // 2. Build header and calculate its realistic pixel height on Page 1
-    const { headerHtml, headerHeight } = this.buildHeader(p, settings);
-
-    // 3. Dynamic page height (safe A4 rendering budget of 960px prevents card overflowing bottom boundary)
-    const pageHeight = options.pageHeight || this.calculatePageHeight(settings);
-    const engine = new LayoutEngine(pageHeight, debug);
-    const calculatedPages = engine.build(blocks, headerHeight);
-
     const summaryTitle = summaryData.summaryTitle || summaryData.title || (cleanLang === 'pt' ? 'RESUMO PROFISSIONAL' : 'PROFESSIONAL SUMMARY');
     const skillsTitle = skillsData.skillsTitle || skillsData.title || (cleanLang === 'pt' ? 'COMPETÊNCIAS & TECNOLOGIAS' : 'SKILLS & TECHNOLOGIES');
     const expTitle = experienceData.experienceTitle || experienceData.title || (cleanLang === 'pt' ? 'HISTÓRICO PROFISSIONAL' : 'PROFESSIONAL EXPERIENCE');
     const eduTitle = educationData.educationTitle || educationData.title || (cleanLang === 'pt' ? 'FORMAÇÃO ACADÊMICA' : 'ACADEMIC BACKGROUND');
     const projTitle = projectsData.projectTitle || projectsData.title || (cleanLang === 'pt' ? 'PROJETOS DE DESTAQUE' : 'FEATURED PROJECTS');
 
-    // 4. HTML builder per physical sheet
-    const pagesHtml = calculatedPages.map((page, index) => {
-      const pageHeader = index === 0 ? `<div data-printable-section>${headerHtml}</div>` : "";
+    // 1. Build Header and compute realistic pixel height on Page 1
+    const { headerHtml, headerHeight } = this.buildHeader(p, settings);
 
-      let sectionsHtml = "";
-      let currentType = null;
-      let activeGroupHtml = "";
+    // 2. Assemble atomic block queues grouped by section
+    const sections = [];
 
-      page.sections.forEach((block) => {
-        if (currentType !== block.type) {
-          if (activeGroupHtml) {
-            sectionsHtml += `<div class="glass-card" data-printable-section>${activeGroupHtml}</div>`;
-            activeGroupHtml = "";
-          }
-          currentType = block.type;
-
-          let sectionTitle = "";
-
-          if (block.type === "summary") {
-            sectionTitle = summaryTitle;
-          } else if (block.type === "skills") {
-            sectionTitle = skillsTitle;
-          } else if (block.type === "experience") {
-            sectionTitle = expTitle;
-          } else if (block.type === "education") {
-            sectionTitle = eduTitle;
-          } else if (block.type === "projects") {
-            sectionTitle = projTitle;
-          }
-
-          activeGroupHtml += `<div class="section-title" data-section-title>${sectionTitle}</div>`;
-        }
-
-        activeGroupHtml += `<div data-printable-item>${block.html}</div>`;
+    // Summary
+    if (summaryData.summary) {
+      sections.push({
+        type: "summary",
+        title: summaryTitle,
+        blocks: [BlockFactory.createSummary(summaryData)]
       });
+    }
 
-      if (activeGroupHtml) {
-        sectionsHtml += `<div class="glass-card" data-printable-section>${activeGroupHtml}</div>`;
-      }
+    // Skills
+    const skillsList = skillsData.skills || (Array.isArray(skillsData) ? skillsData : []);
+    if (skillsList.length > 0) {
+      sections.push({
+        type: "skills",
+        title: skillsTitle,
+        blocks: [BlockFactory.createSkills({ skills: skillsList, title: skillsTitle }, settings)]
+      });
+    }
+
+    // Experience
+    const expList = experienceData.experiences || (Array.isArray(experienceData) ? experienceData : []);
+    if (Array.isArray(expList) && expList.length > 0) {
+      sections.push({
+        type: "experience",
+        title: expTitle,
+        blocks: expList.map(exp => BlockFactory.createExperience(exp, settings))
+      });
+    }
+
+    // Education
+    const eduList = educationData.educations || educationData.education || (Array.isArray(educationData) ? educationData : []);
+    if (Array.isArray(eduList) && eduList.length > 0) {
+      sections.push({
+        type: "education",
+        title: eduTitle,
+        blocks: eduList.map(edu => BlockFactory.createEducation(edu, settings))
+      });
+    }
+
+    // Projects
+    const projList = projectsData.projects || (Array.isArray(projectsData) ? projectsData : []);
+    if (Array.isArray(projList) && projList.length > 0) {
+      sections.push({
+        type: "projects",
+        title: projTitle,
+        blocks: projList.map(proj => BlockFactory.createProjects(proj))
+      });
+    }
+
+    // 3. Deterministic Page Allocation with Section Splitting
+    const pageHeight = options.pageHeight || this.calculatePageHeight(settings);
+    const engine = new LayoutEngine(pageHeight, debug);
+    const calculatedPages = engine.build(sections, headerHeight);
+
+    // 4. Render HTML sheets per physical A4 page with closed, independent cards
+    const pagesHtml = calculatedPages.map((page, pageIndex) => {
+      const pageHeaderHtml = pageIndex === 0 ? `<div data-printable-section>${headerHtml}</div>` : "";
+
+      const cardsHtml = page.cards.map((card) => {
+        const itemsHtml = card.blocks.map(b => `<div class="item-block" data-printable-item>${b.html}</div>`).join("");
+
+        return `
+          <div class="glass-card glass-card-${card.type}" data-printable-section>
+            <div class="section-title" data-section-title>${card.title}</div>
+            <div class="items-holder">${itemsHtml}</div>
+          </div>
+        `;
+      }).join("");
 
       return `
         <div class="a4-page">
-          ${pageHeader}
-          ${sectionsHtml}
+          ${pageHeaderHtml}
+          ${cardsHtml}
         </div>
       `;
     }).join("");
@@ -131,7 +125,10 @@ class ResumeBuilderService {
   }
 
   static calculatePageHeight(settings = {}) {
-    return 960;
+    // 297mm height at standard 96 DPI is ~1123px.
+    // Margins (12mm top + 14mm bottom) is ~98px.
+    // Usable printable content budget is ~1010px.
+    return 1000;
   }
 
   static styles(settings = {}) {
@@ -151,7 +148,7 @@ class ResumeBuilderService {
         contactItems.push({
           title: locText,
           link: (typeof p.location === 'object' && p.location.link) ? p.location.link : `https://maps.google.com/?q=${encodeURIComponent(locText)}`,
-          icon: "📍"
+          icon: "location"
         });
       }
     }
@@ -161,7 +158,7 @@ class ResumeBuilderService {
       contactItems.push({
         title: p.contact.email.email,
         link: `mailto:${p.contact.email.email}`,
-        icon: "✉️"
+        icon: "email"
       });
     }
 
@@ -170,7 +167,7 @@ class ResumeBuilderService {
       contactItems.push({
         title: p.contact.phone.phone,
         link: p.contact.phone.link || (cleanPhone ? `https://wa.me/${cleanPhone}` : '#'),
-        icon: "📞"
+        icon: "phone"
       });
     }
 
@@ -181,7 +178,6 @@ class ResumeBuilderService {
         let displayTitle = val.name || key;
         let favicon = '';
 
-        // If it's a portfolio or generic website link, extract the site name / domain
         if (val.url && (key.toLowerCase().includes('portfolio') || key.toLowerCase().includes('site') || key.toLowerCase().includes('web') || displayTitle.toLowerCase().includes('portfólio') || displayTitle.toLowerCase().includes('portfolio'))) {
           try {
             const parsed = new URL(val.url.startsWith('http') ? val.url : `https://${val.url}`);
@@ -217,10 +213,10 @@ class ResumeBuilderService {
     const contactsHtml = ContactLinkOptimizer.renderHtml(contactItems, 680, settings);
     const rows = ContactLinkOptimizer.balanceLinks(contactItems, 680);
     const badgesHeight = (rows.length * 28) + (rows.length > 1 ? (rows.length - 1) * 6 : 0);
-    const headerHeight = Math.round(62 + badgesHeight + 14);
+    const headerHeight = Math.round(60 + badgesHeight + 14);
 
     const headerHtml = `
-      <header style="margin-bottom: 6px; border-bottom: 1px solid ${card.borderColor || 'rgba(255,255,255,0.1)'}; padding-bottom: 10px;">
+      <header style="margin-bottom: 8px; border-bottom: 1px solid ${card.borderColor || 'rgba(255,255,255,0.1)'}; padding-bottom: 12px;">
         <h1>${p.name || ""}</h1>
         <h2 class="candidate-subtitle">${p.title || ""}</h2>
         ${contactsHtml}
@@ -236,50 +232,75 @@ class ResumeBuilderService {
 
   static debugPagination(resume) {
     const settings = resume.settings || {};
+    const summaryData = resume.summaryDetails || resume.summary || {};
+    const skillsData = resume.skillsDetails || resume.skills || {};
+    const experienceData = resume.experienceDetails || resume.experiences || {};
+    const educationData = resume.educationDetails || resume.education || {};
+    const projectsData = resume.projectDetails || resume.projects || {};
 
-    const blocks = [];
+    const sections = [];
 
-    if (resume.summary?.summary) {
-      blocks.push(BlockFactory.createSummary(resume.summary));
-    }
-
-    if (resume.skills?.skills) {
-      blocks.push(BlockFactory.createSkills(resume.skills, settings));
-    }
-
-    if (Array.isArray(resume.experiences?.experiences)) {
-      resume.experiences.experiences.forEach((exp) => {
-        blocks.push(BlockFactory.createExperience(exp, settings));
+    if (summaryData.summary) {
+      sections.push({
+        type: "summary",
+        title: summaryData.summaryTitle || "RESUMO PROFISSIONAL",
+        blocks: [BlockFactory.createSummary(summaryData)]
       });
     }
 
-    if (Array.isArray(resume.education?.education)) {
-      resume.education.education.forEach((edu) => {
-        blocks.push(BlockFactory.createEducation(edu, settings));
+    const skillsList = skillsData.skills || (Array.isArray(skillsData) ? skillsData : []);
+    if (skillsList.length > 0) {
+      sections.push({
+        type: "skills",
+        title: skillsData.skillsTitle || "COMPETÊNCIAS & TECNOLOGIAS",
+        blocks: [BlockFactory.createSkills({ skills: skillsList }, settings)]
       });
     }
 
-    if (Array.isArray(resume.projects?.projects)) {
-      resume.projects.projects.forEach((proj) => {
-        blocks.push(BlockFactory.createProjects(proj));
+    const expList = experienceData.experiences || (Array.isArray(experienceData) ? experienceData : []);
+    if (Array.isArray(expList) && expList.length > 0) {
+      sections.push({
+        type: "experience",
+        title: experienceData.experienceTitle || "HISTÓRICO PROFISSIONAL",
+        blocks: expList.map(exp => BlockFactory.createExperience(exp, settings))
       });
     }
 
+    const eduList = educationData.educations || educationData.education || (Array.isArray(educationData) ? educationData : []);
+    if (Array.isArray(eduList) && eduList.length > 0) {
+      sections.push({
+        type: "education",
+        title: educationData.educationTitle || "FORMAÇÃO ACADÊMICA",
+        blocks: eduList.map(edu => BlockFactory.createEducation(edu, settings))
+      });
+    }
+
+    const projList = projectsData.projects || (Array.isArray(projectsData) ? projectsData : []);
+    if (Array.isArray(projList) && projList.length > 0) {
+      sections.push({
+        type: "projects",
+        title: projectsData.projectTitle || "PROJETOS DE DESTAQUE",
+        blocks: projList.map(proj => BlockFactory.createProjects(proj))
+      });
+    }
+
+    const { headerHeight } = this.buildHeader(resume.personalDetails || {}, settings);
     const pageHeight = this.calculatePageHeight(settings);
     const engine = new LayoutEngine(pageHeight, true);
-    const pages = engine.build(blocks);
+    const pages = engine.build(sections, headerHeight);
 
     return {
       pageHeightPx: pageHeight,
       totalPages: pages.length,
-      blocksCount: blocks.length,
+      sectionsCount: sections.length,
       pagesSummary: pages.map((page, index) => ({
         pageNumber: index + 1,
-        totalHeightPx: page.totalHeight,
-        remainingSpacePx: pageHeight - page.totalHeight,
-        blocks: page.sections.map(s => ({
-          type: s.type,
-          estimatedHeightPx: s.height
+        usedHeightPx: page.usedHeight,
+        remainingSpacePx: page.remainingHeight(),
+        cards: page.cards.map(c => ({
+          type: c.type,
+          title: c.title,
+          blocksCount: c.blocks.length
         }))
       }))
     };

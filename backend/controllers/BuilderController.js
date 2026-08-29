@@ -88,6 +88,13 @@ class BuilderController {
 
             const userId = req.user?.id || req.body?.userId || null;
 
+            logger.info('[PDF] Publishing render job', {
+                jobId,
+                queue: 'pdf.render',
+                type,
+                userId
+            });
+
             // Dispatch via MessageBroker (RabbitMQ primary, InMemory fallback)
             const messageBroker = require('../messaging/MessageBroker');
             await messageBroker.dispatch('pdf.render', {

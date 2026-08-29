@@ -4,7 +4,7 @@
 
 function generateStyles(s = {}) {
   const isLight = s.theme === 'light';
-  const card = s.card || { borderColor: 'rgba(255, 255, 255, 0.08)', backgroundColor: 'rgba(255, 255, 255, 0.03)' };
+  const card = s.card || { borderColor: isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)', backgroundColor: isLight ? '#ffffff' : 'rgba(255, 255, 255, 0.03)' };
   const title = s.title || { primary: {}, secondary: {} };
   const subtitle = s.subtitle || { primary: {}, secondary: {} };
   const caption = s.caption || { primary: {}, secondary: {} };
@@ -13,49 +13,64 @@ function generateStyles(s = {}) {
 
   return `
     <style>
-      /* Fonts resolved via system cascade — no network calls in Docker/Puppeteer */
-
-      @page { size: A4; margin: 0mm !important; }
+      @page { size: A4; margin: 0 !important; }
       * { box-sizing: border-box; }
       
       html, body {
-        margin: 0 !important; padding: 0 !important; width: 210mm; height: 297mm;
+        margin: 0 !important; padding: 0 !important; width: 210mm;
         background: ${s.backgroundColor || (isLight ? '#ffffff' : '#050505')} !important;
         -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
       }
 
       body {
-        font-family: ${caption.secondary.fontType || "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"};
+        font-family: ${caption.secondary.fontType || "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"};
         color: ${caption.secondary.fontColor || (isLight ? '#334155' : '#e5e7eb')};
         font-size: ${caption.secondary.fontSize || '13px'};
         line-height: 1.5;
       }
 
       .a4-page {
-        width: 210mm; height: 297mm; max-height: 297mm;
-        page-break-after: always !important; break-after: always !important;
-        background: ${s.backgroundColor || (isLight ? '#ffffff' : '#050505')} !important; 
+        width: 210mm;
+        height: 297mm;
+        max-height: 297mm;
         padding: 12mm 14mm;
-        display: flex; flex-direction: column; gap: 8px;
-        overflow: hidden; position: relative;
+        box-sizing: border-box;
+        page-break-after: always !important;
+        break-after: always !important;
+        overflow: hidden;
+        background: ${s.backgroundColor || (isLight ? '#ffffff' : '#050505')} !important;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
       }
-      .a4-page:last-child { page-break-after: avoid !important; break-after: avoid !important; }
+
+      .a4-page:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }
 
       .glass-card {
         background: ${card.backgroundColor} !important;
         border: 1px solid ${card.borderColor} !important;
-        border-radius: 8px; padding: 12px 16px;
-        display: flex; flex-direction: column; gap: 6px;
+        border-radius: 8px;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        box-shadow: none !important;
         position: relative;
-        break-inside: avoid !important; page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
       }
 
       .item-block, .skill-group, .education-item, .experience-item, .project-item {
-        break-inside: avoid !important; page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
       }
 
       h1 { 
-        font-family: ${title.primary.fontType || "'Inter', sans-serif"}; 
+        font-family: ${title.primary.fontType || "'Roboto', sans-serif"}; 
         font-size: ${title.primary.fontSize || '24px'}; 
         color: ${isLight ? '#0f172a' : (title.primary.fontColor || '#f8fafc')}; 
         font-weight: 800;
@@ -64,15 +79,15 @@ function generateStyles(s = {}) {
       }
 
       h2.candidate-subtitle { 
-        font-family: ${subtitle.primary.fontType || "'Inter', sans-serif"}; 
+        font-family: ${subtitle.primary.fontType || "'Roboto', sans-serif"}; 
         font-size: ${subtitle.primary.fontSize || '12px'}; 
         color: ${isLight ? '#0f172a' : (subtitle.primary.fontColor || '#9ca3af')}; 
         font-weight: 700;
-        margin: 0; text-transform: uppercase; letter-spacing: 1.5px;
+        margin: 4px 0 0 0; text-transform: uppercase; letter-spacing: 1.5px;
       }
 
       .section-title { 
-        font-family: ${title.secondary.fontType || "'Inter', sans-serif"};
+        font-family: ${title.secondary.fontType || "'Roboto', sans-serif"};
         font-size: ${title.secondary.fontSize || '13px'}; 
         font-weight: 700; 
         color: ${isLight ? '#0f172a' : (title.secondary.fontColor || '#f3f4f6')}; 
@@ -87,36 +102,51 @@ function generateStyles(s = {}) {
       .contacts-row { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; }
 
       .contact-badge {
-        font-family: ${meta.fontType || "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"};
+        font-family: ${meta.fontType || "'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"};
         font-size: ${meta.fontSize || '11px'};
         font-weight: 600;
         color: ${isLight ? '#0f172a' : (meta.fontColor || '#d1d5db')};
         text-decoration: none;
         display: inline-flex; align-items: center; gap: 6px;
-        background: ${isLight ? 'rgba(15, 23, 42, 0.05)' : 'rgba(255, 255, 255, 0.04)'};
+        background: ${isLight ? 'rgba(241, 245, 249, 0.9)' : 'rgba(255, 255, 255, 0.04)'};
         padding: 3px 8px; border-radius: 4px;
         border: 1px solid ${isLight ? 'rgba(15, 23, 42, 0.12)' : 'rgba(255, 255, 255, 0.08)'};
       }
 
-      .contact-icon {
+      .contact-icon-glass {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 14px;
-        height: 14px;
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        background: ${isLight ? 'rgba(37, 99, 235, 0.1)' : 'rgba(255, 255, 255, 0.08)'};
+        border: 1px solid ${isLight ? 'rgba(37, 99, 235, 0.2)' : 'rgba(255, 255, 255, 0.15)'};
         color: ${title.primary.fontColor || (isLight ? '#0284c7' : '#9ca3af')};
+        flex-shrink: 0;
       }
 
       .svg-icon {
-        width: 13px;
-        height: 13px;
         display: block;
       }
 
-      .contact-text { vertical-align: middle; }
+      .project-link-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: ${isLight ? 'rgba(37, 99, 235, 0.1)' : 'rgba(255, 255, 255, 0.08)'};
+        border: 1px solid ${isLight ? 'rgba(37, 99, 235, 0.2)' : 'rgba(255, 255, 255, 0.15)'};
+        color: ${isLight ? '#0284c7' : '#9ca3af'} !important;
+        font-size: 11px;
+        font-weight: 600;
+        text-decoration: none;
+        vertical-align: middle;
+      }
 
       .badge {
-        font-family: ${chip.fontType || "'Inter', sans-serif"};
+        font-family: ${chip.fontType || "'Roboto', sans-serif"};
         font-size: ${chip.fontSize || '10px'};
         font-weight: 500;
         color: ${chip.fontColor || (isLight ? '#0f172a' : '#f3f4f6')};
@@ -126,14 +156,14 @@ function generateStyles(s = {}) {
       }
 
       .item-company {
-        font-family: ${caption.primary.fontType || "'Inter', sans-serif"};
+        font-family: ${caption.primary.fontType || "'Roboto', sans-serif"};
         font-size: ${caption.primary.fontSize || '13px'};
         font-weight: 700;
         color: ${caption.primary.fontColor || (isLight ? '#0f172a' : '#f9fafb')};
       }
 
       .item-role {
-        font-family: ${subtitle.primary.fontType || "'Inter', sans-serif"};
+        font-family: ${subtitle.primary.fontType || "'Roboto', sans-serif"};
         font-size: ${subtitle.primary.fontSize || '12px'};
         font-weight: 600;
         color: ${isLight ? '#475569' : (subtitle.primary.fontColor || '#9ca3af')};
@@ -141,7 +171,7 @@ function generateStyles(s = {}) {
       }
 
       .item-date { 
-        font-family: ${meta.fontType || "'Inter', sans-serif"};
+        font-family: ${meta.fontType || "'Roboto', sans-serif"};
         font-size: ${meta.fontSize || '10px'};
         font-weight: 600;
         color: ${meta.fontColor || (isLight ? '#64748b' : '#6b7280')}; 
@@ -151,7 +181,7 @@ function generateStyles(s = {}) {
       .item-block { width: 100%; margin: 0 !important; padding: 0 !important; }
 
       .description-text, ul { 
-        font-family: ${caption.secondary.fontType || "'Inter', sans-serif"};
+        font-family: ${caption.secondary.fontType || "'Roboto', sans-serif"};
         font-size: ${caption.secondary.fontSize || '12px'};
         color: ${caption.secondary.fontColor || (isLight ? '#334155' : '#d1d5db')}; 
         text-align: justify; margin: 0;
