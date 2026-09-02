@@ -5,6 +5,7 @@ import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
 import { GlassHubLogo } from '../atoms/GlassHubLogo';
 import { useAuth } from '../../hooks/useAuth';
+import { useI18n } from '../../hooks/useI18n';
 
 interface CustomerHelpModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface CustomerHelpModalProps {
 
 export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, onClose }) => {
   const { user, accessToken } = useAuth();
+  const { t, locale } = useI18n();
   const [activeTab, setActiveTab] = useState<'FAQ' | 'GUIDES' | 'TICKETS' | 'NEW_TICKET' | 'LIVE_CHAT' | 'RECOVERY'>('FAQ');
   const [faqSearch, setFaqSearch] = useState('');
 
@@ -185,7 +187,8 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
     }
   };
 
-  const faqs = [
+  const isPt = locale.startsWith('pt');
+  const faqs = isPt ? [
     {
       q: 'Como funciona a avaliação de compatibilidade ATS?',
       a: 'O sistema avalia a densidade de verbos de ação, palavras-chave tecnológicas essenciais e a clareza estrutural com base nos padrões utilizados por plataformas de triagem empresarial (Llama 3.2 ATS Engine).'
@@ -196,7 +199,7 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
     },
     {
       q: 'Posso importar um currículo antigo em PDF ou DOCX?',
-      a: 'Sim! Na gaveta do Assistente IA (Quick Fill), utilize a opção "Importar Currículo Antigo" para fazer upload de arquivos .pdf ou .docx. O motor extrai e preenche automaticamente cada campo do seu currículo.'
+      a: 'Sim! Na gaveta do Assistente IA (Quick Fill), utilize a opção "Importar Arquivo" para fazer upload de arquivos .pdf ou .docx. O motor extrai e preenche automaticamente cada campo do seu currículo.'
     },
     {
       q: 'Como gerar meu currículo em outros idiomas?',
@@ -205,6 +208,27 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
     {
       q: 'Como funciona a exportação de PDF calibrada?',
       a: 'A exportação é processada em segundo plano por um worker Puppeteer Linux dedicado com resolução de 300 DPI, garantindo proporções milimétricas A4 e quebra de páginas sem corte de linhas.'
+    }
+  ] : [
+    {
+      q: 'How does the ATS compatibility evaluation work?',
+      a: 'The system evaluates action verb density, essential technology keywords, and structural clarity based on corporate applicant tracking benchmarks (Llama 3.2 ATS Engine).'
+    },
+    {
+      q: 'How does account deletion and the 30-day grace period work?',
+      a: 'When requesting account deletion, your account is placed into a temporary deactivation status. You receive an email with a unique recovery token and have 30 days to restore access. After 30 days, all data is permanently and irreversibly purged.'
+    },
+    {
+      q: 'Can I import an existing PDF or DOCX resume?',
+      a: 'Yes! In the AI Assistant drawer (Quick Fill), select "File Import" to upload your .pdf or .docx resume. The Llama 3.2 engine automatically extracts and populates each field.'
+    },
+    {
+      q: 'How do I generate my resume in other languages?',
+      a: 'Open the "Document" menu and click "Add International Version". You can choose manual authoring or instant AI translation via worker with Llama 3.2 / TranslateGemma.'
+    },
+    {
+      q: 'How does the calibrated PDF export work?',
+      a: 'Export is processed in the background by a dedicated Puppeteer worker at 300 DPI, ensuring millimeter-accurate A4 sizing and clean page breaks without splitting text.'
     }
   ];
 
@@ -231,10 +255,10 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
             <GlassHubLogo size={32} />
             <div>
               <Heading level={2} className="text-xl font-black text-slate-100">
-                Central de <GradientText from="from-cyan-400" to="to-violet-400">Ajuda & Suporte ao Cliente</GradientText>
+                <GradientText from="from-cyan-400" to="to-violet-400">{t('helpModalTitle')}</GradientText>
               </Heading>
               <p className="text-xs text-slate-400">
-                Perguntas frequentes, manuais de uso, abertura de chamados e atendimento em tempo real
+                {t('helpModalSubtitle')}
               </p>
             </div>
           </div>
@@ -242,24 +266,24 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
           {/* TABS NAVIGATION */}
           <div className="flex flex-wrap gap-2 border-b border-white/10 pb-3">
             {[
-              { id: 'FAQ', label: '❓ Dúvidas Frequentes (FAQ)' },
-              { id: 'GUIDES', label: '📖 Manuais & Tutoriais' },
-              { id: 'TICKETS', label: `🎫 Meus Chamados (${tickets.length})` },
-              { id: 'NEW_TICKET', label: '➕ Abrir Chamado' },
-              { id: 'LIVE_CHAT', label: '💬 Chat de Atendimento' },
-              { id: 'RECOVERY', label: '🔄 Recuperar Conta' }
-            ].map(t => (
+              { id: 'FAQ', label: `❓ ${t('tabFaq')}` },
+              { id: 'GUIDES', label: `📖 ${t('tabGuides')}` },
+              { id: 'TICKETS', label: `🎫 ${t('tabTickets')} (${tickets.length})` },
+              { id: 'NEW_TICKET', label: `➕ ${t('tabNewTicket')}` },
+              { id: 'LIVE_CHAT', label: `💬 ${t('tabLiveChat')}` },
+              { id: 'RECOVERY', label: `🔄 ${t('tabRecovery')}` }
+            ].map(tabItem => (
               <button
-                key={t.id}
+                key={tabItem.id}
                 type="button"
-                onClick={() => setActiveTab(t.id as any)}
+                onClick={() => setActiveTab(tabItem.id as any)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  activeTab === t.id
+                  activeTab === tabItem.id
                     ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
                     : 'bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                {t.label}
+                {tabItem.label}
               </button>
             ))}
           </div>
@@ -279,7 +303,7 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
                 type="text"
                 value={faqSearch}
                 onChange={e => setFaqSearch(e.target.value)}
-                placeholder="Buscar dúvida ou tópico de ajuda..."
+                placeholder={t('searchFaqPlaceholder')}
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
               />
 
@@ -296,20 +320,38 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
 
           {/* 2. GUIDES TAB */}
           {activeTab === 'GUIDES' && (
-            <div className="space-y-4 animate-in fade-in max-h-96 overflow-y-auto pr-1 text-xs text-slate-300 space-y-4">
+            <div className="space-y-4 animate-in fade-in max-h-96 overflow-y-auto pr-1 text-xs text-slate-300">
               <div className="p-4 rounded-xl bg-slate-900/70 border border-white/5 space-y-2">
-                <h4 className="text-sm font-bold text-violet-300">1. Construção & Edição do Currículo</h4>
-                <p>Navegue pelas abas (Dados Pessoais, Resumo, Experiência, Habilidades, Educação e Projetos). Suas informações são salvas automaticamente a cada edição no banco de dados.</p>
+                <h4 className="text-sm font-bold text-violet-300">
+                  {isPt ? '1. Construção & Edição do Currículo' : '1. Resume Building & Editing'}
+                </h4>
+                <p>
+                  {isPt 
+                    ? 'Navegue pelas abas (Dados Pessoais, Resumo, Experiência, Habilidades, Educação, Projetos e Carta). Suas informações são salvas automaticamente a cada edição no banco de dados.'
+                    : 'Navigate through tabs (Personal Info, Summary, Experience, Skills, Education, Projects, and Cover Letter). All changes auto-save instantly to the database.'}
+                </p>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-900/70 border border-white/5 space-y-2">
-                <h4 className="text-sm font-bold text-cyan-300">2. Importação Automática de PDF ou DOCX</h4>
-                <p>Abra o <strong>Assistente IA</strong> e na aba <strong>Importar Arquivo</strong>, envie seu arquivo .pdf ou .docx antigo para que a inteligência artificial preencha o currículo para você.</p>
+                <h4 className="text-sm font-bold text-cyan-300">
+                  {isPt ? '2. Importação Automática de PDF ou DOCX' : '2. Automated PDF/DOCX Parsing'}
+                </h4>
+                <p>
+                  {isPt
+                    ? 'Abra o Assistente IA e na aba Importar Arquivo, envie seu arquivo .pdf ou .docx para que a inteligência artificial estruture os campos automaticamente.'
+                    : 'Open the AI Assistant and select File Import to upload an existing .pdf or .docx resume for automated extraction.'}
+                </p>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-900/70 border border-white/5 space-y-2">
-                <h4 className="text-sm font-bold text-emerald-300">3. Auditoria ATS em Tempo Real</h4>
-                <p>Clique no botão flutuante <strong>ATS: XX/100</strong> para ver palavras-chave em falta no mercado e recomendações personalizadas do recrutador inteligente.</p>
+                <h4 className="text-sm font-bold text-emerald-300">
+                  {isPt ? '3. Auditoria ATS em Tempo Real' : '3. Real-Time ATS Audit'}
+                </h4>
+                <p>
+                  {isPt
+                    ? 'Clique no botão flutuante ATS para visualizar palavras-chave em falta no mercado e recomendações personalizadas do recrutador inteligente.'
+                    : 'Click the floating ATS button to inspect missing industry keywords and actionable suggestions from the AI recruiter.'}
+                </p>
               </div>
             </div>
           )}
@@ -318,37 +360,37 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
           {activeTab === 'TICKETS' && (
             <div className="space-y-3 animate-in fade-in">
               <div className="flex justify-between items-center">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Seus Chamados de Suporte</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">{t('tabTickets')}</h3>
                 <Button variant="neon" size="sm" onClick={() => setActiveTab('NEW_TICKET')} leftIcon="+">
-                  Novo Chamado
+                  {t('tabNewTicket')}
                 </Button>
               </div>
 
               <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
                 {tickets.length === 0 ? (
-                  <p className="text-xs text-slate-500 py-8 text-center">Você não possui nenhum chamado aberto.</p>
+                  <p className="text-xs text-slate-500 py-8 text-center">{t('noTicketsFound')}</p>
                 ) : (
-                  tickets.map(t => (
+                  tickets.map(tkt => (
                     <div
-                      key={t.id}
-                      onClick={() => { setActiveTicket(t); setActiveTab('LIVE_CHAT'); }}
+                      key={tkt.id}
+                      onClick={() => { setActiveTicket(tkt); setActiveTab('LIVE_CHAT'); }}
                       className="p-3.5 rounded-xl bg-slate-900/80 border border-white/5 hover:border-cyan-500/40 transition cursor-pointer flex justify-between items-center"
                     >
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs text-slate-100">{t.subject}</span>
-                          <Badge variant={t.type === 'ACCOUNT_DELETION' ? 'red' : 'cyan'} className="text-[9px]">
-                            {t.type}
+                          <span className="font-bold text-xs text-slate-100">{tkt.subject}</span>
+                          <Badge variant={tkt.type === 'ACCOUNT_DELETION' ? 'red' : 'cyan'} className="text-[9px]">
+                            {tkt.type}
                           </Badge>
                         </div>
-                        <p className="text-[11px] text-slate-400 truncate max-w-md">{t.description}</p>
+                        <p className="text-[11px] text-slate-400 truncate max-w-md">{tkt.description}</p>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <Badge variant={t.status === 'RESOLVED' ? 'emerald' : t.status === 'IN_PROGRESS' ? 'amber' : 'violet'}>
-                          {t.status}
+                        <Badge variant={tkt.status === 'RESOLVED' ? 'emerald' : tkt.status === 'IN_PROGRESS' ? 'amber' : 'violet'}>
+                          {tkt.status}
                         </Badge>
-                        <span className="text-cyan-400 text-xs font-bold">Abrir Chat →</span>
+                        <span className="text-cyan-400 text-xs font-bold">Chat →</span>
                       </div>
                     </div>
                   ))
@@ -361,40 +403,40 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
           {activeTab === 'NEW_TICKET' && (
             <form onSubmit={handleCreateTicket} className="space-y-3.5 animate-in fade-in">
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Tipo de Solicitação</label>
+                <label className="text-xs font-bold text-slate-300 block mb-1">{t('ticketTypeLabel')}</label>
                 <select
                   value={ticketType}
                   onChange={e => setTicketType(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-100 focus:outline-none focus:border-cyan-400"
                 >
-                  <option value="TECHNICAL_ISSUE">Problema Técnico / Bug no Sistema</option>
-                  <option value="FEATURE_REQUEST">Sugestão de Recurso / Novo Modelo</option>
-                  <option value="BILLING">Dúvidas sobre Exportação / Documentos</option>
-                  <option value="ACCOUNT_DELETION">⚠️ Solicitação de Exclusão de Conta (Prazo de 30 dias)</option>
-                  <option value="GENERAL">Outros Assuntos</option>
+                  <option value="TECHNICAL_ISSUE">{t('ticketTypeIssue')}</option>
+                  <option value="FEATURE_REQUEST">{t('ticketTypeFeature')}</option>
+                  <option value="BILLING">{t('ticketTypeBilling')}</option>
+                  <option value="ACCOUNT_DELETION">{t('ticketTypeAccount')}</option>
+                  <option value="GENERAL">General</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Assunto</label>
+                <label className="text-xs font-bold text-slate-300 block mb-1">{t('ticketSubjectLabel')}</label>
                 <input
                   type="text"
                   required
                   value={ticketSubject}
                   onChange={e => setTicketSubject(e.target.value)}
-                  placeholder="Resumo do problema ou solicitação..."
+                  placeholder={t('ticketSubjectPlaceholder')}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Descrição Detalhada</label>
+                <label className="text-xs font-bold text-slate-300 block mb-1">{t('ticketDescLabel')}</label>
                 <textarea
                   rows={4}
                   required
                   value={ticketDescription}
                   onChange={e => setTicketDescription(e.target.value)}
-                  placeholder="Descreva detalhadamente o que ocorreu..."
+                  placeholder={t('ticketDescPlaceholder')}
                   className="w-full p-3.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                 />
               </div>
@@ -406,7 +448,7 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
                 isLoading={isSubmittingTicket}
                 className="w-full font-bold min-h-[42px]"
               >
-                Enviar Chamado para o Atendimento
+                {t('openTicketBtn')}
               </Button>
             </form>
           )}
@@ -418,8 +460,8 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 rounded-xl bg-slate-900/80 border border-white/5">
                     <div>
-                      <span className="text-xs font-bold text-slate-100">Chamado: {activeTicket.subject}</span>
-                      <span className="text-[10px] text-slate-400 block">Status: {activeTicket.status} • Atendente: {activeTicket.assignedTo || 'Aguardando atendente...'}</span>
+                      <span className="text-xs font-bold text-slate-100">{t('tabTickets')}: {activeTicket.subject}</span>
+                      <span className="text-[10px] text-slate-400 block">Status: {activeTicket.status} • {activeTicket.assignedTo || t('chatAgentWaiting')}</span>
                     </div>
                     <Badge variant={activeTicket.status === 'RESOLVED' ? 'emerald' : 'amber'}>
                       {activeTicket.status}
@@ -452,19 +494,19 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
                       type="text"
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
-                      placeholder="Digite sua mensagem em tempo real para o atendente..."
+                      placeholder={t('chatInputPlaceholder')}
                       className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-100 focus:outline-none focus:border-cyan-400"
                     />
                     <Button variant="neon" size="sm" type="submit" isLoading={isSendingMsg} leftIcon="➤">
-                      Enviar
+                      {t('chatSendBtn')}
                     </Button>
                   </form>
                 </div>
               ) : (
                 <div className="py-12 text-center space-y-3">
-                  <p className="text-xs text-slate-400">Nenhum chamado selecionado para o chat em tempo real.</p>
+                  <p className="text-xs text-slate-400">{t('noTicketsFound')}</p>
                   <Button variant="glass" size="sm" onClick={() => setActiveTab('TICKETS')}>
-                    Ver Meus Chamados
+                    {t('tabTickets')}
                   </Button>
                 </div>
               )}
@@ -476,22 +518,24 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
             <div className="space-y-4 animate-in fade-in">
               <div className="p-4 rounded-xl bg-slate-900/70 border border-amber-500/30 space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                  🛡️ Recuperação de Conta Excluída (Prazo de 30 Dias)
+                  🛡️ {t('tabRecovery')}
                 </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Se você solicitou a exclusão da sua conta, ela permanece em período de carência por 30 dias. Insira o token de recuperação único enviado para o seu e-mail para restaurar imediatamente seu acesso.
+                  {isPt
+                    ? 'Se você solicitou a exclusão da sua conta, ela permanece em período de carência por 30 dias. Insira o token de recuperação único enviado para o seu e-mail para restaurar imediatamente seu acesso.'
+                    : 'If you requested account deletion, your account remains in a 30-day grace period. Enter the unique recovery token sent to your email to restore access.'}
                 </p>
               </div>
 
               <form onSubmit={handleRecoverAccount} className="space-y-3">
                 <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">Token de Recuperação</label>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">{t('recoveryTokenLabel')}</label>
                   <input
                     type="text"
                     required
                     value={recoveryToken}
                     onChange={e => setRecoveryToken(e.target.value)}
-                    placeholder="Cole o token de 64 caracteres recebido no e-mail..."
+                    placeholder={t('recoveryTokenPlaceholder')}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-100 font-mono focus:outline-none focus:border-cyan-400"
                   />
                 </div>
@@ -509,7 +553,7 @@ export const CustomerHelpModal: React.FC<CustomerHelpModalProps> = ({ isOpen, on
                   isLoading={isRecovering}
                   className="w-full font-bold min-h-[42px]"
                 >
-                  Restaurar Minha Conta Agora
+                  {t('restoreAccountBtn')}
                 </Button>
               </form>
             </div>

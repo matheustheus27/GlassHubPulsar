@@ -50,6 +50,15 @@ async function runTranslationTests() {
           bullets: ['Plataforma de alta performance com processamento assíncrono.']
         }
       ]
+    },
+    coverLetterDetails: {
+      greeting: 'Prezada Equipe de Recrutamento,',
+      text: [
+        'Apresento minha candidatura à vaga de Engenheiro de Software Sênior.',
+        'Tenho ampla experiência com sistemas distribuídos e microsserviços.'
+      ],
+      valediction: 'Atenciosamente,',
+      signature: 'Alexandre Silveira'
     }
   };
 
@@ -86,6 +95,14 @@ async function runTranslationTests() {
   assert(translated.summaryDetails.summary.toLowerCase().includes('developer') || translated.summaryDetails.summary.toLowerCase().includes('microservices'), 'Summary must be translated');
   assert(translated.skillsDetails.skills[0].category.toLowerCase().includes('languages'), 'Skills category must be translated');
   assert(translated.experienceDetails.experiences[0].period.toLowerCase().includes('sep') || translated.experienceDetails.experiences[0].period.toLowerCase().includes('present'), 'Period must be translated');
+
+  console.log('  Cover Letter Greeting:', translated.coverLetterDetails?.greeting);
+  console.log('  Cover Letter Text (Paragraph 1):', translated.coverLetterDetails?.text?.[0]);
+  console.log('  Cover Letter Valediction:', translated.coverLetterDetails?.valediction);
+
+  assert(translated.coverLetterDetails, 'Cover letter details must be present in translated document');
+  assert(translated.coverLetterDetails.greeting.toLowerCase().includes('dear') || translated.coverLetterDetails.greeting.toLowerCase().includes('team') || translated.coverLetterDetails.greeting.toLowerCase().includes('committee'), 'Cover letter greeting must be translated');
+  assert(translated.coverLetterDetails.valediction.toLowerCase().includes('sincerely') || translated.coverLetterDetails.valediction.toLowerCase().includes('regards'), 'Cover letter valediction must be translated');
 
   console.log(`\nProgress Events Emitted: ${progressEvents.length}`);
   assert(progressEvents.some(e => e.progress === 10), 'Must emit 10% progress');

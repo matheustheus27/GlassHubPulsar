@@ -4,6 +4,7 @@ import { Heading } from '../atoms/Typography';
 import { Button } from '../atoms/Button';
 import { Badge } from '../atoms/Badge';
 import { ProgressBar } from '../atoms/ProgressBar';
+import { useI18n } from '../../hooks/useI18n';
 
 export interface ATSReportData {
   overallScore: number;
@@ -46,9 +47,19 @@ export const ATSScoreModal: React.FC<ATSScoreModalProps> = ({
   onRunAnalysis,
   onReanalyze
 }) => {
+  const { t, locale } = useI18n();
+  const isPt = locale.startsWith('pt');
+
   if (!isOpen) return null;
 
   const triggerAnalysis = onRunAnalysis || onReanalyze || (() => {});
+
+  const getPriorityLabel = (priority: string) => {
+    const p = (priority || '').toUpperCase();
+    if (p === 'HIGH') return t('atsPriorityHigh');
+    if (p === 'MEDIUM') return t('atsPriorityMedium');
+    return t('atsPriorityLow');
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto animate-in fade-in">
@@ -59,10 +70,10 @@ export const ATSScoreModal: React.FC<ATSScoreModalProps> = ({
               <span className="text-2xl">📊</span>
               <div>
                 <Heading level={2} className="text-lg text-slate-100 font-bold">
-                  Avaliação Empresarial ATS & Inteligência HR (Llama 3.2)
+                  {t('atsModalTitle')}
                 </Heading>
                 <p className="text-xs text-slate-400">
-                  Análise preditiva de aprovação em filtros automáticos de grandes empresas
+                  {t('atsModalSubtitle')}
                 </p>
               </div>
             </div>
@@ -78,10 +89,10 @@ export const ATSScoreModal: React.FC<ATSScoreModalProps> = ({
             <div className="py-16 flex flex-col items-center justify-center space-y-4">
               <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-sm font-semibold text-cyan-300">
-                O Llama 3.2 está avaliando o currículo contra o padrão ATS...
+                {t('atsLoadingTitle')}
               </p>
               <p className="text-xs text-slate-400">
-                Calculando densidade de verbos de ação, palavras-chave e legibilidade
+                {t('atsLoadingSubtitle')}
               </p>
             </div>
           ) : report ? (
@@ -94,13 +105,13 @@ export const ATSScoreModal: React.FC<ATSScoreModalProps> = ({
                     <span className="text-[10px] text-slate-400 absolute bottom-3">/ 100</span>
                   </div>
                   <span className="text-xs font-bold text-slate-200 mt-2 uppercase tracking-wider">
-                    ATS Score Geral
+                    {t('atsOverallScore')}
                   </span>
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-                    Veredito do Especialista
+                    {isPt ? 'Veredito do Especialista' : 'Expert Verdict'}
                   </h4>
                   <p className="text-sm text-slate-300 leading-relaxed">
                     {report.summary}
@@ -112,19 +123,21 @@ export const ATSScoreModal: React.FC<ATSScoreModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-slate-900/50 border border-white/10 space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-200">Densidade de Verbos de Ação</span>
+                    <span className="text-xs font-bold text-slate-200">{t('atsActionVerbs')}</span>
                     <span className="text-xs font-bold text-cyan-400">{report.actionVerbsDensity.score}%</span>
                   </div>
                   <ProgressBar progress={report.actionVerbsDensity.score} color="cyan" />
                   <div className="pt-2 text-[11px] text-slate-400">
-                    <strong className="text-emerald-400">Verbos fortes: </strong>
-                    {report.actionVerbsDensity.strongVerbsFound.join(', ')}
+                    <strong className="text-emerald-400">{t('atsStrongVerbsFound')}: </strong>
+                    {report.actionVerbsDensity.strongVerbsFound.length > 0
+                      ? report.actionVerbsDensity.strongVerbsFound.join(', ')
+                      : (isPt ? 'Nenhum detectado' : 'None detected')}
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-slate-900/50 border border-white/10 space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-200">Clareza Estrutural</span>
+                    <span className="text-xs font-bold text-slate-200">{t('atsStructuralClarity')}</span>
                     <span className="text-xs font-bold text-emerald-400">{report.structuralClarity.score}%</span>
                   </div>
                   <ProgressBar progress={report.structuralClarity.score} color="emerald" />
@@ -137,21 +150,25 @@ export const ATSScoreModal: React.FC<ATSScoreModalProps> = ({
               {/* MISSING KEYWORDS */}
               <div className="space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  ⚠️ Keywords Essenciais em Falta no Mercado
+                  ⚠️ {t('atsMissingKeywords')}
                 </h4>
                 <div className="flex flex-wrap gap-1.5">
-                  {report.missingKeywords.map(kw => (
-                    <Badge key={kw} variant="amber">
-                      + {kw}
-                    </Badge>
-                  ))}
+                  {report.missingKeywords.length === 0 ? (
+                    <span className="text-xs text-emerald-400 font-semibold">{t('atsAllKeywordsPresent')}</span>
+                  ) : (
+                    report.missingKeywords.map(kw => (
+                      <Badge key={kw} variant="amber">
+                        + {kw}
+                      </Badge>
+                    ))
+                  )}
                 </div>
               </div>
 
               {/* ACTIONABLE RECOMMENDATIONS */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-                  🎯 Recomendações Priorizadas
+                  🎯 {t('atsRecommendations')}
                 </h4>
                 <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
                   {report.actionableRecommendations.map((rec, i) => (
@@ -160,7 +177,7 @@ export const ATSScoreModal: React.FC<ATSScoreModalProps> = ({
                       className="p-3 rounded-lg bg-slate-900/60 border border-white/5 flex items-start gap-2.5 text-xs text-slate-300"
                     >
                       <Badge variant={rec.priority === 'HIGH' ? 'amber' : 'cyan'}>
-                        {rec.priority}
+                        {getPriorityLabel(rec.priority)}
                       </Badge>
                       <div>
                         <strong className="text-slate-200">{rec.category}: </strong>
@@ -174,20 +191,22 @@ export const ATSScoreModal: React.FC<ATSScoreModalProps> = ({
           ) : (
             <div className="py-12 text-center space-y-4">
               <p className="text-sm text-slate-400">
-                Nenhuma avaliação executada nesta sessão. Clique no botão abaixo para avaliar.
+                {isPt
+                  ? 'Nenhuma avaliação executada nesta sessão. Clique no botão abaixo para avaliar.'
+                  : 'No ATS evaluation performed in this session. Click the button below to evaluate.'}
               </p>
               <Button variant="neon" size="md" onClick={triggerAnalysis} leftIcon="⚡">
-                Executar Análise ATS com IA
+                {isPt ? 'Executar Análise ATS com IA' : 'Run ATS Evaluation with AI'}
               </Button>
             </div>
           )}
 
           <div className="flex justify-between items-center pt-2 border-t border-white/10">
             <Button variant="ghost" size="sm" onClick={triggerAnalysis} leftIcon="🔄" disabled={isLoading}>
-              Reanalisar
+              {t('atsReanalyzeBtn')}
             </Button>
             <Button variant="glass" size="sm" onClick={onClose}>
-              Fechar
+              {t('close')}
             </Button>
           </div>
         </GlassSurface>

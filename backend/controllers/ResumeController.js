@@ -9,13 +9,19 @@ const logger = require('../utils/logger');
 class ResumeController {
   async getResume(req, res) {
     try {
-      const { lang = 'pt-BR' } = req.query;
+      const lang = req.query.lang || req.query.language || 'pt-BR';
       const userId = req.user?.id || 'demo-user-default';
 
       let resume = null;
+      let coverLetter = null;
       try {
         if (prisma.resumeData) {
           resume = await prisma.resumeData.findFirst({
+            where: { userId, language: lang }
+          });
+        }
+        if (prisma.coverLetterData) {
+          coverLetter = await prisma.coverLetterData.findFirst({
             where: { userId, language: lang }
           });
         }
@@ -23,19 +29,29 @@ class ResumeController {
         logger.warn('[ResumeController] DB read fallback:', dbErr.message);
       }
 
-      if (!resume) {
+      if (!resume && !coverLetter) {
         return res.json({ success: true, data: null, language: lang });
       }
 
+      const coverText = coverLetter?.text
+        ? (Array.isArray(coverLetter.text) ? coverLetter.text : [String(coverLetter.text)])
+        : (resume?.coverLetter?.text || ['']);
+
       // Map back to frontend expected structure
       const formatted = {
-        personalDetails: resume.personalDetails || {},
-        summaryDetails: resume.summary || { summary: '' },
-        skillsDetails: resume.skills || { skills: [] },
-        experienceDetails: resume.experiences || { experiences: [] },
-        educationDetails: resume.education || { educations: [] },
-        projectDetails: resume.projects || { projects: [] },
-        coverLetterDetails: resume.coverLetter || { greeting: '', text: [''], valediction: '', signature: '' }
+        personalDetails: resume?.personalDetails || coverLetter?.personalDetails || {},
+        summaryDetails: resume?.summary || { summary: '' },
+        skillsDetails: resume?.skills || { skills: [] },
+        experienceDetails: resume?.experiences || { experiences: [] },
+        educationDetails: resume?.education || { educations: [] },
+        projectDetails: resume?.projects || { projects: [] },
+        coverLetterDetails: {
+          greeting: coverLetter?.greeting || resume?.coverLetter?.greeting || '',
+          text: coverText,
+          paragraphs: coverText,
+          valediction: coverLetter?.valediction || resume?.coverLetter?.valediction || '',
+          signature: coverLetter?.signature || resume?.coverLetter?.signature || (resume?.personalDetails?.name || '')
+        }
       };
 
       return res.json({
@@ -66,10 +82,11 @@ class ResumeController {
       const projects = document.projectDetails || document.projects || {};
       const coverLetter = document.coverLetterDetails || document.coverLetter || {};
 
-      let saved = null;
+      let savedResume = null;
+      let savedCover = null;
       try {
         if (prisma.resumeData) {
-          saved = await prisma.resumeData.upsert({
+          savedResume = await prisma.resumeData.upsert({
             where: {
               userId_language: { userId, language }
             },
@@ -95,16 +112,46 @@ class ResumeController {
             }
           });
         }
+
+        if (prisma.coverLetterData && (coverLetter.greeting || coverLetter.text || coverLetter.paragraphs || coverLetter.signature)) {
+          const paragraphs = Array.isArray(coverLetter.text)
+            ? coverLetter.text
+            : (Array.isArray(coverLetter.paragraphs)
+                ? coverLetter.paragraphs
+                : [coverLetter.text || coverLetter.paragraphs || '']);
+
+          savedCover = await prisma.coverLetterData.upsert({
+            where: {
+              userId_language: { userId, language }
+            },
+            create: {
+              userId,
+              language,
+              greeting: coverLetter.greeting || 'Prezado(a) Recrutador(a),',
+              text: paragraphs,
+              signature: coverLetter.signature || personalDetails.name || 'Candidato',
+              valediction: coverLetter.valediction || 'Atenciosamente,',
+              personalDetails
+            },
+            update: {
+              greeting: coverLetter.greeting || 'Prezado(a) Recrutador(a),',
+              text: paragraphs,
+              signature: coverLetter.signature || personalDetails.name || 'Candidato',
+              valediction: coverLetter.valediction || 'Atenciosamente,',
+              personalDetails
+            }
+          });
+        }
       } catch (dbErr) {
         logger.warn('[ResumeController] DB write fallback:', dbErr.message);
       }
 
-      logger.info(`[ResumeController] Saved resume for user [${userId}] in language [${language}]`);
+      logger.info(`[ResumeController] Saved document for user [${userId}] in language [${language}]`);
 
       return res.json({
         success: true,
-        message: 'Currículo salvo com sucesso!',
-        data: saved || document
+        message: 'Currículo e carta salvos com sucesso!',
+        data: savedResume || document
       });
     } catch (err) {
       logger.error('Error saving resume:', err);

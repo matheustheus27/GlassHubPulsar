@@ -130,7 +130,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
 
   // Fetch user resume data from backend API on mount
   useEffect(() => {
-    fetch('/api/resume', {
+    fetch(`/api/resume?lang=${docLanguage}`, {
       headers: {
         'Authorization': accessToken ? `Bearer ${accessToken}` : ''
       },
@@ -264,7 +264,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
     setOpenATSScore(true);
 
     try {
-      const payload = buildResumePayload(docLanguage, isLight, styles, docData);
+      const isResume = activeTab === 'resume';
+      const payload = isResume
+        ? buildResumePayload(docLanguage, isLight, styles, docData)
+        : buildCoverPayload(docLanguage, isLight, styles, docData);
+
       const res = await fetch('/api/ai/ats-analyze', {
         method: 'POST',
         headers: {
@@ -272,7 +276,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
           'Authorization': accessToken ? `Bearer ${accessToken}` : ''
         },
         body: JSON.stringify({
-          document: payload,
+          document: {
+            ...payload,
+            coverLetterDetails: docData.coverLetterDetails
+          },
           language: docLanguage
         })
       });
@@ -380,18 +387,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
     const handleTranslationApplied = (event: any) => {
       const { document: translatedDoc, targetLang } = event.detail || {};
       if (translatedDoc) {
-        setDocData((prev: any) => ({
-          ...prev,
-          personalDetails: translatedDoc.personalDetails || translatedDoc.personal || prev.personalDetails,
-          summaryDetails: translatedDoc.summaryDetails || translatedDoc.summary || prev.summaryDetails,
-          skillsDetails: translatedDoc.skillsDetails || translatedDoc.skills || prev.skillsDetails,
-          experienceDetails: translatedDoc.experienceDetails || translatedDoc.experiences || prev.experienceDetails,
-          educationDetails: translatedDoc.educationDetails || translatedDoc.education || prev.educationDetails,
-          projectDetails: translatedDoc.projectDetails || translatedDoc.projects || prev.projectDetails
-        }));
+        setDocData((prev: any) => {
+          const merged = {
+            ...prev,
+            ...translatedDoc,
+            personalDetails: translatedDoc.personalDetails || translatedDoc.personal || prev.personalDetails,
+            summaryDetails: translatedDoc.summaryDetails || translatedDoc.summary || prev.summaryDetails,
+            skillsDetails: translatedDoc.skillsDetails || translatedDoc.skills || prev.skillsDetails,
+            experienceDetails: translatedDoc.experienceDetails || translatedDoc.experiences || prev.experienceDetails,
+            educationDetails: translatedDoc.educationDetails || translatedDoc.education || prev.educationDetails,
+            projectDetails: translatedDoc.projectDetails || translatedDoc.projects || prev.projectDetails,
+            coverLetterDetails: translatedDoc.coverLetterDetails || translatedDoc.coverLetter || prev.coverLetterDetails
+          };
+          // Persist immediately so translation survives F5
+          saveResumeData(merged);
+          return merged;
+        });
 
         setToast({
-          message: `✓ Currículo traduzido com sucesso para ${targetLang}!`,
+          message: `✓ Currículo e carta traduzidos com sucesso para ${targetLang}!`,
           type: 'success'
         });
       }
@@ -619,7 +633,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onOpenAdminCockpit
           <AIChatDrawer
             isOpen={openAIChat}
             onClose={() => setOpenAIChat(false)}
-            documentData={buildResumePayload(docLanguage, isLight, styles, docData)}
+            documentData={activeTab === 'cover' ? buildCoverPayload(docLanguage, isLight, styles, docData) : buildResumePayload(docLanguage, isLight, styles, docData)}
             onApplyStructuredData={handleApplyQuickFill}
           />
 

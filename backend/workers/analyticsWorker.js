@@ -171,6 +171,19 @@ class AnalyticsWorker {
       bullets: Array.isArray(proj.bullets) ? proj.bullets : []
     }));
 
+    // 7. Cover Letter (Text & Paragraphs)
+    const rawCover = doc.coverLetterDetails || doc.coverLetter || {};
+    const coverParagraphs = Array.isArray(rawCover.text)
+      ? rawCover.text
+      : (Array.isArray(rawCover.paragraphs)
+          ? rawCover.paragraphs
+          : (rawCover.text || rawCover.paragraphs ? [rawCover.text || rawCover.paragraphs] : []));
+    const coverLetter = {
+      greeting: rawCover.greeting || '',
+      text: coverParagraphs.filter(Boolean),
+      valediction: rawCover.valediction || ''
+    };
+
     return {
       name: name.trim(),
       title: title.trim(),
@@ -178,7 +191,8 @@ class AnalyticsWorker {
       skills,
       experiences,
       education,
-      projects
+      projects,
+      coverLetter
     };
   }
 

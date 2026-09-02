@@ -21,30 +21,40 @@ export const CoverLetterSection: React.FC<CoverLetterSectionProps> = ({
   bodyStyle,
   signatureStyle
 }) => {
+  const paragraphs = Array.isArray(text)
+    ? text
+    : (typeof text === 'string' && (text as string).trim() ? [text] : []);
+
   return (
     <GlassSurface style={cardStyle} glow="cyan" className="space-y-4 leading-relaxed">
-      <p style={bodyStyle} className="text-sm font-medium text-slate-200">
-        {greeting}
-      </p>
+      {greeting && (
+        <p style={{ ...bodyStyle, whiteSpace: 'pre-wrap' }} className="text-sm font-semibold text-slate-200">
+          {greeting}
+        </p>
+      )}
 
       <div className="flex flex-col gap-3">
-        {text.map((paragraph, idx) => (
+        {paragraphs.map((paragraph, idx) => (
           <p
             key={idx}
-            style={bodyStyle}
-            className="text-sm text-justify text-slate-300 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: processInHtml(paragraph) }}
+            style={{ ...bodyStyle, whiteSpace: 'pre-wrap' }}
+            className="text-sm text-justify text-slate-300 leading-relaxed whitespace-pre-wrap"
+            dangerouslySetInnerHTML={{ __html: processInHtml(paragraph).replace(/\n/g, '<br />') }}
           />
         ))}
       </div>
 
       <div className="pt-4 space-y-1">
-        <p style={bodyStyle} className="text-sm text-slate-300">
-          {valediction}
-        </p>
-        <p style={signatureStyle} className="text-base font-bold text-cyan-400">
-          {signature}
-        </p>
+        {valediction && (
+          <p style={{ ...bodyStyle, whiteSpace: 'pre-wrap' }} className="text-sm text-slate-300">
+            {valediction}
+          </p>
+        )}
+        {signature && (
+          <p style={signatureStyle} className="text-base font-bold text-cyan-400">
+            {signature}
+          </p>
+        )}
       </div>
     </GlassSurface>
   );

@@ -12,7 +12,10 @@ class Logger {
   getPrisma() {
     if (!this.prisma) {
       try {
-        this.prisma = require('../prisma/client');
+        const client = require('../prisma/client');
+        if (client && (client.systemExecutionLog || client.$connect)) {
+          this.prisma = client;
+        }
       } catch (e) {
         // Prisma not initialized yet
       }

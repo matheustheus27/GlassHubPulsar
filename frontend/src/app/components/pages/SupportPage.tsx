@@ -7,6 +7,7 @@ import { GlassHubLogo } from '../atoms/GlassHubLogo';
 import { AuthModal } from '../organisms/AuthModal';
 import { LanguageSelector } from '../molecules/LanguageSelector';
 import { useAuth } from '../../hooks/useAuth';
+import { useI18n } from '../../hooks/useI18n';
 
 interface SupportPageProps {
   onNavigateHome?: () => void;
@@ -18,6 +19,8 @@ export const SupportPage: React.FC<SupportPageProps> = ({
   onNavigateDashboard
 }) => {
   const { user, accessToken, loginUser } = useAuth();
+  const { t, locale } = useI18n();
+  const isPt = locale.startsWith('pt');
   const [activeTab, setActiveTab] = useState<'FAQ' | 'GUIDES' | 'TICKETS' | 'NEW_TICKET' | 'LIVE_CHAT' | 'RECOVERY'>('FAQ');
   const [faqSearch, setFaqSearch] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -307,12 +310,12 @@ export const SupportPage: React.FC<SupportPageProps> = ({
           {/* TABS NAVIGATION */}
           <div className="flex flex-wrap gap-2 border-b border-white/10 pb-4">
             {[
-              { id: 'FAQ', label: '❓ Dúvidas Frequentes (FAQ)' },
-              { id: 'GUIDES', label: '📖 Manuais & Tutoriais' },
-              { id: 'NEW_TICKET', label: '➕ Abrir Chamado' },
-              { id: 'TICKETS', label: `🎫 Meus Chamados (${tickets.length})` },
-              { id: 'LIVE_CHAT', label: '💬 Chat de Atendimento' },
-              { id: 'RECOVERY', label: '🔄 Recuperar Conta' }
+              { id: 'FAQ', label: `❓ ${t('tabFaq')}` },
+              { id: 'GUIDES', label: `📖 ${t('tabGuides')}` },
+              { id: 'NEW_TICKET', label: `➕ ${t('tabNewTicket')}` },
+              { id: 'TICKETS', label: `🎫 ${t('tabTickets')} (${tickets.length})` },
+              { id: 'LIVE_CHAT', label: `💬 ${t('tabLiveChat')}` },
+              { id: 'RECOVERY', label: `🔄 ${t('tabRecovery')}` }
             ].map(tab => (
               <button
                 key={tab.id}

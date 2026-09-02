@@ -8,11 +8,7 @@ try {
   puppeteer = require('puppeteer');
 } catch (error) {
   const logger = require('../utils/logger');
-  logger.error('[PDFWorker] Puppeteer could not be loaded', {
-    error: error.message,
-    stack: error.stack
-  });
-  throw error;
+  logger.warn('[PDFWorker] Puppeteer could not be loaded on host environment (available in Docker container):', error.message);
 }
 
 let pdfParse;

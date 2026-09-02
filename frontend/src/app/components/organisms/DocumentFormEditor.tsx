@@ -1204,64 +1204,118 @@ export const DocumentFormEditor: React.FC<DocumentFormEditorProps> = ({
       )}
 
       {/* 7. CARTA DE APRESENTAÇÃO */}
-      {activeTab === 'cover' && (
-        <div className="space-y-4 animate-in fade-in">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-            {t('coverHeading')}
-          </h3>
+      {activeTab === 'cover' && (() => {
+        const paragraphs: string[] = Array.isArray(coverLetter.text) && coverLetter.text.length > 0
+          ? coverLetter.text
+          : (Array.isArray(coverLetter.paragraphs) && coverLetter.paragraphs.length > 0
+              ? coverLetter.paragraphs
+              : (typeof coverLetter.text === 'string' && coverLetter.text ? [coverLetter.text] : ['']));
 
-          <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelGreeting')}</label>
-            <input
-              type="text"
-              value={coverLetter.greeting || ''}
-              onChange={e => onChange({ ...documentData, coverLetterDetails: { ...coverLetter, greeting: e.target.value } })}
-              placeholder={t('phGreeting')}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500"
-            />
-          </div>
+        const updateParagraphs = (newParas: string[]) => {
+          onChange({
+            ...documentData,
+            coverLetterDetails: {
+              ...coverLetter,
+              text: newParas,
+              paragraphs: newParas
+            }
+          });
+        };
 
-          <div>
-            <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelParagraphs')}</label>
-            {coverLetter.text?.map((p: string, pIdx: number) => (
-              <textarea
-                key={pIdx}
-                rows={3}
-                value={p}
-                onChange={e => {
-                  const updated = [...coverLetter.text];
-                  updated[pIdx] = e.target.value;
-                  onChange({ ...documentData, coverLetterDetails: { ...coverLetter, text: updated } });
-                }}
-                className="w-full p-3 mb-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 leading-relaxed"
-              />
-            ))}
-          </div>
+        const addParagraph = () => {
+          updateParagraphs([...paragraphs, '']);
+        };
 
-          <div className="grid grid-cols-2 gap-3">
+        const removeParagraph = (idxToRemove: number) => {
+          const filtered = paragraphs.filter((_, idx) => idx !== idxToRemove);
+          updateParagraphs(filtered.length > 0 ? filtered : ['']);
+        };
+
+        const setParagraphContent = (idx: number, val: string) => {
+          const updated = [...paragraphs];
+          updated[idx] = val;
+          updateParagraphs(updated);
+        };
+
+        return (
+          <div className="space-y-4 animate-in fade-in">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-400">
+              {t('coverHeading')}
+            </h3>
+
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelValediction')}</label>
+              <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelGreeting')}</label>
               <input
                 type="text"
-                value={coverLetter.valediction || ''}
-                onChange={e => onChange({ ...documentData, coverLetterDetails: { ...coverLetter, valediction: e.target.value } })}
-                placeholder={t('phValediction')}
+                value={coverLetter.greeting || ''}
+                onChange={e => onChange({ ...documentData, coverLetterDetails: { ...coverLetter, greeting: e.target.value } })}
+                placeholder={t('phGreeting')}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500"
               />
             </div>
-            <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelSignature')}</label>
-              <input
-                type="text"
-                value={coverLetter.signature || ''}
-                onChange={e => onChange({ ...documentData, coverLetterDetails: { ...coverLetter, signature: e.target.value } })}
-                placeholder={t('phSignature')}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500"
-              />
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold text-slate-300 block">{t('labelParagraphs')}</label>
+                <button
+                  type="button"
+                  onClick={addParagraph}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-bold transition flex items-center gap-1 cursor-pointer"
+                >
+                  {t('addParagraphBtn')}
+                </button>
+              </div>
+
+              {paragraphs.map((p: string, pIdx: number) => (
+                <div key={pIdx} className="space-y-1 relative group">
+                  <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono">
+                    <span>{t('labelParagraphs')} {pIdx + 1}</span>
+                    {paragraphs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeParagraph(pIdx)}
+                        className="text-red-400 hover:text-red-300 transition cursor-pointer"
+                      >
+                        {t('removeParagraphBtn')}
+                      </button>
+                    )}
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={p}
+                    onChange={e => setParagraphContent(pIdx, e.target.value)}
+                    placeholder={t('paragraphPlaceholder')}
+                    className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 leading-relaxed font-sans placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelValediction')}</label>
+                <input
+                  type="text"
+                  value={coverLetter.valediction || ''}
+                  onChange={e => onChange({ ...documentData, coverLetterDetails: { ...coverLetter, valediction: e.target.value } })}
+                  placeholder={t('phValediction')}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">{t('labelSignature')}</label>
+                <input
+                  type="text"
+                  value={coverLetter.signature || ''}
+                  onChange={e => onChange({ ...documentData, coverLetterDetails: { ...coverLetter, signature: e.target.value } })}
+                  placeholder={t('phSignature')}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs md:text-sm text-slate-100 placeholder-slate-500"
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </GlassSurface>
   );
 };

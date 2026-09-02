@@ -10,6 +10,8 @@ const TagProcessor = require('../layout/TagProcessor');
 class TranslationWorker {
   constructor() {
     this.sseEmitter = null;
+    this.workingOllamaHost = null;
+    this.ollamaCheckedAt = 0;
     this.init();
   }
 
@@ -53,7 +55,191 @@ class TranslationWorker {
   }
 
   /**
-   * Fast, holistic JSON-to-JSON translation using Llama 3.2 / TranslateGemma without RAG overhead
+   * Extracts ONLY pure human narrative strings from the candidate document,
+   * completely stripping IDs, dates, URLs, numbers, styles, and boolean flags.
+   */
+  extractTranslatableFields(document = {}) {
+    const personal = document.personalDetails || document.personal || {};
+    const summary = document.summaryDetails || document.summary || {};
+    const rawSkills = document.skillsDetails?.skills || document.skills?.skills || (Array.isArray(document.skills) ? document.skills : []);
+    const rawExp = document.experienceDetails?.experiences || document.experiences?.experiences || (Array.isArray(document.experiences) ? document.experiences : []);
+    const rawEdu = document.educationDetails?.educations || document.education?.education || (Array.isArray(document.education) ? document.education : []);
+    const rawProj = document.projectDetails?.projects || document.projects?.projects || (Array.isArray(document.projects) ? document.projects : []);
+    const cover = document.coverLetterDetails || document.coverLetter || {};
+
+    const payload = {};
+
+    // 1. Personal Title
+    if (personal.title) {
+      payload.personal = { title: personal.title };
+    }
+
+    // 2. Summary
+    if (summary.summary || summary.summaryTitle) {
+      payload.summary = {
+        title: summary.summaryTitle || 'Resumo Profissional',
+        content: summary.summary || ''
+      };
+    }
+
+    // 3. Skills Categories (Only category titles, not tech buzzwords like Docker, React, etc.)
+    if (rawSkills.length > 0) {
+      payload.skillsCategories = rawSkills.map(c => c.category || c.name || c.title || '');
+    }
+
+    // 4. Experiences (Roles and achievement bullets)
+    if (rawExp.length > 0) {
+      payload.experiences = rawExp.map((exp, idx) => ({
+        index: idx,
+        position: exp.position || exp.role || '',
+        bullets: Array.isArray(exp.bullets) ? exp.bullets : (exp.description ? [exp.description] : [])
+      }));
+    }
+
+    // 5. Education (Degrees and descriptions)
+    if (rawEdu.length > 0) {
+      payload.education = rawEdu.map((edu, idx) => ({
+        index: idx,
+        degree: edu.degree || edu.role || '',
+        description: edu.description || ''
+      }));
+    }
+
+    // 6. Projects (Titles, summaries, bullets)
+    if (rawProj.length > 0) {
+      payload.projects = rawProj.map((proj, idx) => ({
+        index: idx,
+        title: proj.title || proj.name || '',
+        description: proj.description || '',
+        bullets: Array.isArray(proj.bullets) ? proj.bullets : []
+      }));
+    }
+
+    // 7. Cover Letter (Greeting, paragraphs, valediction)
+    const coverParagraphs = cover.text || cover.paragraphs || cover.bullets || [];
+    if (cover.greeting || coverParagraphs.length > 0 || cover.valediction) {
+      payload.coverLetter = {
+        greeting: cover.greeting || '',
+        paragraphs: Array.isArray(coverParagraphs) ? coverParagraphs : [String(coverParagraphs)],
+        valediction: cover.valediction || ''
+      };
+    }
+
+    return payload;
+  }
+
+  /**
+   * Reconstructs the complete document by injecting translated fields back into original structure,
+   * preserving all original IDs, links, contacts, dates, styles, and settings.
+   */
+  mergeTranslatedFields(originalDoc = {}, translated = {}) {
+    const doc = JSON.parse(JSON.stringify(originalDoc || {}));
+
+    if (!translated || typeof translated !== 'object') return doc;
+
+    // 1. Personal Title
+    if (translated.personal?.title) {
+      if (!doc.personalDetails) doc.personalDetails = {};
+      doc.personalDetails.title = translated.personal.title;
+      if (doc.personal?.personal) doc.personal.personal.title = translated.personal.title;
+      if (doc.personal) doc.personal.title = translated.personal.title;
+    }
+
+    // 2. Summary
+    if (translated.summary) {
+      if (!doc.summaryDetails) doc.summaryDetails = {};
+      if (translated.summary.content) doc.summaryDetails.summary = translated.summary.content;
+      if (translated.summary.title) doc.summaryDetails.summaryTitle = translated.summary.title;
+      if (doc.summary) {
+        if (translated.summary.content) doc.summary.summary = translated.summary.content;
+        if (translated.summary.title) doc.summary.summaryTitle = translated.summary.title;
+      }
+    }
+
+    // 3. Skills Categories
+    if (Array.isArray(translated.skillsCategories)) {
+      const skillsArr = doc.skillsDetails?.skills || doc.skills?.skills || (Array.isArray(doc.skills) ? doc.skills : []);
+      translated.skillsCategories.forEach((catName, i) => {
+        if (skillsArr[i] && catName) {
+          if (skillsArr[i].category !== undefined) skillsArr[i].category = catName;
+          if (skillsArr[i].name !== undefined) skillsArr[i].name = catName;
+          if (skillsArr[i].title !== undefined) skillsArr[i].title = catName;
+        }
+      });
+    }
+
+    // 4. Experiences
+    if (Array.isArray(translated.experiences)) {
+      const expArr = doc.experienceDetails?.experiences || doc.experiences?.experiences || (Array.isArray(doc.experiences) ? doc.experiences : []);
+      translated.experiences.forEach((tExp) => {
+        const idx = tExp.index !== undefined ? tExp.index : -1;
+        const target = idx >= 0 ? expArr[idx] : null;
+        if (target) {
+          if (tExp.position) {
+            target.position = tExp.position;
+            target.role = tExp.position;
+          }
+          if (Array.isArray(tExp.bullets) && tExp.bullets.length > 0) {
+            target.bullets = tExp.bullets;
+          }
+        }
+      });
+    }
+
+    // 5. Education
+    if (Array.isArray(translated.education)) {
+      const eduArr = doc.educationDetails?.educations || doc.education?.education || (Array.isArray(doc.education) ? doc.education : []);
+      translated.education.forEach((tEdu) => {
+        const idx = tEdu.index !== undefined ? tEdu.index : -1;
+        const target = idx >= 0 ? eduArr[idx] : null;
+        if (target) {
+          if (tEdu.degree) target.degree = tEdu.degree;
+          if (tEdu.description) target.description = tEdu.description;
+        }
+      });
+    }
+
+    // 6. Projects
+    if (Array.isArray(translated.projects)) {
+      const projArr = doc.projectDetails?.projects || doc.projects?.projects || (Array.isArray(doc.projects) ? doc.projects : []);
+      translated.projects.forEach((tProj) => {
+        const idx = tProj.index !== undefined ? tProj.index : -1;
+        const target = idx >= 0 ? projArr[idx] : null;
+        if (target) {
+          if (tProj.title) target.title = tProj.title;
+          if (tProj.description) target.description = tProj.description;
+          if (Array.isArray(tProj.bullets) && tProj.bullets.length > 0) {
+            target.bullets = tProj.bullets;
+          }
+        }
+      });
+    }
+
+    // 7. Cover Letter
+    if (translated.coverLetter) {
+      if (!doc.coverLetterDetails) doc.coverLetterDetails = {};
+      if (translated.coverLetter.greeting) doc.coverLetterDetails.greeting = translated.coverLetter.greeting;
+      if (Array.isArray(translated.coverLetter.paragraphs)) {
+        doc.coverLetterDetails.text = translated.coverLetter.paragraphs;
+        doc.coverLetterDetails.paragraphs = translated.coverLetter.paragraphs;
+      }
+      if (translated.coverLetter.valediction) doc.coverLetterDetails.valediction = translated.coverLetter.valediction;
+
+      if (doc.coverLetter) {
+        if (translated.coverLetter.greeting) doc.coverLetter.greeting = translated.coverLetter.greeting;
+        if (Array.isArray(translated.coverLetter.paragraphs)) {
+          doc.coverLetter.text = translated.coverLetter.paragraphs;
+          doc.coverLetter.paragraphs = translated.coverLetter.paragraphs;
+        }
+        if (translated.coverLetter.valediction) doc.coverLetter.valediction = translated.coverLetter.valediction;
+      }
+    }
+
+    return doc;
+  }
+
+  /**
+   * Fast, holistic JSON-to-JSON translation using Llama 3.2 / TranslateGemma on filtered text payload
    */
   async translateDocumentWithLlama(document, targetLang = 'en-US') {
     const isTargetEn = targetLang.startsWith('en');
@@ -62,25 +248,27 @@ class TranslationWorker {
     const isTargetDe = targetLang.startsWith('de');
     const targetLangName = isTargetEn ? 'English (US)' : (isTargetEs ? 'Spanish' : (isTargetFr ? 'French' : (isTargetDe ? 'German' : 'Portuguese')));
 
-    const prompt = `You are an executive resume translation engine (TranslateGemma / Llama 3.2).
-Translate the following JSON resume document into fluent, natural, highly professional ${targetLangName} suitable for senior tech and executive resumes.
+    const filteredPayload = this.extractTranslatableFields(document);
+
+    const prompt = `You are an executive resume and cover letter translation engine (TranslateGemma / Llama 3.2).
+Translate the following structured JSON text into fluent, natural, highly professional ${targetLangName} suitable for senior tech and executive profiles.
 
 CRITICAL RULES:
-1. Maintain the EXACT JSON structure and key names (e.g. "personalDetails", "summaryDetails", "skillsDetails", "experienceDetails", "educationDetails", "projectDetails").
-2. Translate ALL human-readable Portuguese text into ${targetLangName} (titles, summaries, category names, experience positions/roles, period dates like "Set 2023 - Presente" -> "Sep 2023 - Present", bullet points, degrees, project descriptions).
+1. Maintain the EXACT JSON structure and key names ("personal", "summary", "skillsCategories", "experiences", "education", "projects", "coverLetter").
+2. Translate ALL human-readable Portuguese text into ${targetLangName} (titles, summaries, category names, roles, bullets, degrees, and cover letter paragraphs).
 3. Do NOT translate technical terms, libraries, or proper names (e.g. React, TypeScript, PHP, Python, Node.js, Docker, MongoDB, PostgreSQL, Redis, AWS, CEFET-MG, Teknisa, Azapfy, RabbitMQ, BullMQ, Puppeteer).
 4. Preserve all formatting tags like <BOLD>, </BOLD>, <HIGHLIGHT>, </HIGHLIGHT>, <ITALIC>, </ITALIC> intact.
-5. Return ONLY a valid, parseable JSON object matching the input structure without introductory/conversational text or markdown codeblocks.
+5. Return ONLY a valid, parseable JSON object matching the input structure without introductory text or markdown codeblocks.
 
 JSON TO TRANSLATE:
-${JSON.stringify(document, null, 2)}`;
+${JSON.stringify(filteredPayload, null, 2)}`;
 
     for (const host of this.getOllamaHosts()) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 40000);
+        const timeout = setTimeout(() => controller.abort(), 5000);
 
-        logger.info(`[TranslationWorker] Attempting holistic JSON translation via Ollama host: ${host}`);
+        logger.info(`[TranslationWorker] Attempting optimized JSON translation via Ollama host: ${host}`);
 
         const res = await fetch(`${host}/api/generate`, {
           method: 'POST',
@@ -92,8 +280,8 @@ ${JSON.stringify(document, null, 2)}`;
             stream: false,
             options: {
               temperature: 0.1,
-              num_ctx: 8192,
-              num_predict: 4096
+              num_ctx: 4096,
+              num_predict: 2048
             }
           }),
           signal: controller.signal
@@ -105,15 +293,19 @@ ${JSON.stringify(document, null, 2)}`;
           const data = await res.json();
           const cleanResp = (data.response || '').trim().replace(/^```json\s*/i, '').replace(/```$/i, '');
           const parsed = JSON.parse(cleanResp);
-          if (parsed && typeof parsed === 'object' && (parsed.personalDetails || parsed.personal || parsed.summaryDetails || parsed.experienceDetails)) {
-            logger.info(`[TranslationWorker] Holistic JSON translation succeeded with host ${host}`);
-            return parsed;
+          if (parsed && typeof parsed === 'object') {
+            logger.info(`[TranslationWorker] Optimized JSON translation succeeded with host ${host}`);
+            this.workingOllamaHost = host;
+            this.ollamaCheckedAt = Date.now();
+            return this.mergeTranslatedFields(document, parsed);
           }
         }
       } catch (e) {
         logger.debug(`[TranslationWorker] Ollama host ${host} note: ${e.message}`);
       }
     }
+    this.workingOllamaHost = null;
+    this.ollamaCheckedAt = Date.now();
     return null;
   }
 
@@ -130,7 +322,10 @@ ${JSON.stringify(document, null, 2)}`;
 
     const targetLangName = isTargetEn ? 'English (US)' : (isTargetEs ? 'Spanish' : (isTargetFr ? 'French' : (isTargetDe ? 'German' : 'Portuguese (pt-BR)')));
 
-    for (const host of this.getOllamaHosts()) {
+    const hasOllama = this.workingOllamaHost || (Date.now() - this.ollamaCheckedAt > 60000);
+    const candidateHosts = this.workingOllamaHost ? [this.workingOllamaHost] : (hasOllama ? this.getOllamaHosts() : []);
+
+    for (const host of candidateHosts) {
       try {
         const prompt = `You are a senior professional resume translator (TranslateGemma / Llama 3.2 engine).
 Translate the following text into fluent, professional ${targetLangName} suitable for tech resumes and executive CVs.
@@ -250,7 +445,16 @@ ${text}`;
         .replace(/bancos de dados/gi, 'databases')
         .replace(/anos de experiência/gi, 'years of experience')
         .replace(/atuação em/gi, 'working in')
-        .replace(/sistemas distribuídos/gi, 'distributed systems');
+        .replace(/sistemas distribuídos/gi, 'distributed systems')
+        .replace(/Prezada Equipe de Recrutamento,?/gi, 'Dear Hiring Team,')
+        .replace(/Prezado\(a\) Recrutador\(a\),?/gi, 'Dear Hiring Manager,')
+        .replace(/Prezado\(a\) Gerente de Contratação,?/gi, 'Dear Hiring Manager,')
+        .replace(/Prezados membros do comitê,?/gi, 'Dear Hiring Committee,')
+        .replace(/Prezados,?/gi, 'Dear Hiring Team,')
+        .replace(/Atenciosamente,?/gi, 'Sincerely,')
+        .replace(/Cordialmente,?/gi, 'Best regards,')
+        .replace(/Apresento minha candidatura à vaga de/gi, 'I submit my application for the position of')
+        .replace(/Tenho ampla experiência com/gi, 'I have extensive experience with');
     }
     return result;
   }
@@ -340,8 +544,8 @@ ${text}`;
         }
         await job.updateProgress?.(85);
 
-        // 5. Translate Education & Projects (95%)
-        this.emitProgress(jobId, 95, isEn ? 'Translating education and featured projects...' : 'Traduzindo formação acadêmica e projetos...', null, targetLang);
+        // 5. Translate Education & Projects (90%)
+        this.emitProgress(jobId, 90, isEn ? 'Translating education and featured projects...' : 'Traduzindo formação acadêmica e projetos...', null, targetLang);
         const eduArr = translated.educationDetails?.educations || translated.education?.education || translated.education?.educations || (Array.isArray(translated.education) ? translated.education : []);
         for (const edu of eduArr) {
           if (edu.degree) {
@@ -370,7 +574,31 @@ ${text}`;
             proj.bullets = await Promise.all(proj.bullets.map(b => this.translateText(b, targetLang)));
           }
         }
-        await job.updateProgress?.(95);
+        await job.updateProgress?.(90);
+
+        // 6. Translate Cover Letter (96%)
+        this.emitProgress(jobId, 96, isEn ? 'Translating cover letter...' : 'Traduzindo carta de apresentação...', null, targetLang);
+        const cover = translated.coverLetterDetails || translated.coverLetter || {};
+        if (cover.greeting) {
+          cover.greeting = await this.translateText(cover.greeting, targetLang);
+        }
+        const coverParagraphs = cover.text || cover.paragraphs || [];
+        if (Array.isArray(coverParagraphs) && coverParagraphs.length > 0) {
+          cover.text = await Promise.all(coverParagraphs.map(p => this.translateText(p, targetLang)));
+          cover.paragraphs = cover.text;
+        }
+        if (cover.valediction) {
+          cover.valediction = await this.translateText(cover.valediction, targetLang);
+        }
+        if (!translated.coverLetterDetails) translated.coverLetterDetails = {};
+        translated.coverLetterDetails = {
+          greeting: cover.greeting || (isEn ? 'Dear Hiring Committee,' : 'Prezados membros do comitê,'),
+          text: cover.text || (isEn ? [''] : ['']),
+          paragraphs: cover.text || (isEn ? [''] : ['']),
+          valediction: cover.valediction || (isEn ? 'Sincerely,' : 'Atenciosamente,'),
+          signature: cover.signature || translated.personalDetails?.name || translated.personal?.name || ''
+        };
+        await job.updateProgress?.(96);
       }
 
       // Update document language settings
@@ -378,33 +606,78 @@ ${text}`;
       translated.settings.language = targetLang;
       translated.language = targetLang;
 
-      // 6. Persist translated version to database
-      if (userId && prisma.resumeData) {
-        await prisma.resumeData.upsert({
-          where: {
-            userId_language: { userId, language: targetLang }
-          },
-          create: {
-            userId,
-            language: targetLang,
-            title: `Resume (${targetLang})`,
-            personalDetails: translated.personalDetails || translated.personal || {},
-            summary: translated.summaryDetails || translated.summary || {},
-            skills: translated.skillsDetails || translated.skills || {},
-            experiences: translated.experienceDetails || translated.experiences || {},
-            education: translated.educationDetails || translated.education || {},
-            projects: translated.projectDetails || translated.projects || {}
-          },
-          update: {
-            title: `Resume (${targetLang})`,
-            personalDetails: translated.personalDetails || translated.personal || {},
-            summary: translated.summaryDetails || translated.summary || {},
-            skills: translated.skillsDetails || translated.skills || {},
-            experiences: translated.experienceDetails || translated.experiences || {},
-            education: translated.educationDetails || translated.education || {},
-            projects: translated.projectDetails || translated.projects || {}
-          }
-        }).catch(err => logger.warn('[TranslationWorker] Could not save to DB:', err.message));
+      // 7. Persist translated version to database
+      if (userId) {
+        if (prisma.resumeData) {
+          await prisma.resumeData.upsert({
+            where: {
+              userId_language: { userId, language: targetLang }
+            },
+            create: {
+              userId,
+              language: targetLang,
+              title: translated.personalDetails?.title || `Resume (${targetLang})`,
+              personalDetails: translated.personalDetails || translated.personal || {},
+              summary: translated.summaryDetails || translated.summary || {},
+              skills: translated.skillsDetails || translated.skills || {},
+              experiences: translated.experienceDetails || translated.experiences || {},
+              education: translated.educationDetails || translated.education || {},
+              projects: translated.projectDetails || translated.projects || {}
+            },
+            update: {
+              title: translated.personalDetails?.title || `Resume (${targetLang})`,
+              personalDetails: translated.personalDetails || translated.personal || {},
+              summary: translated.summaryDetails || translated.summary || {},
+              skills: translated.skillsDetails || translated.skills || {},
+              experiences: translated.experienceDetails || translated.experiences || {},
+              education: translated.educationDetails || translated.education || {},
+              projects: translated.projectDetails || translated.projects || {}
+            }
+          }).catch(err => logger.warn('[TranslationWorker] Could not save resume to DB:', err.message));
+        }
+
+        // Persist Cover Letter Data
+        if (prisma.coverLetterData && (translated.coverLetterDetails || translated.coverLetter)) {
+          const cl = translated.coverLetterDetails || translated.coverLetter || {};
+          await prisma.coverLetterData.upsert({
+            where: {
+              userId_language: { userId, language: targetLang }
+            },
+            create: {
+              userId,
+              language: targetLang,
+              greeting: cl.greeting || (isEn ? 'Dear Hiring Committee,' : 'Prezados membros do comitê,'),
+              text: cl.text || cl.paragraphs || [''],
+              signature: cl.signature || translated.personalDetails?.name || 'Candidate',
+              valediction: cl.valediction || (isEn ? 'Sincerely,' : 'Atenciosamente,'),
+              personalDetails: translated.personalDetails || translated.personal || {}
+            },
+            update: {
+              greeting: cl.greeting || (isEn ? 'Dear Hiring Committee,' : 'Prezados membros do comitê,'),
+              text: cl.text || cl.paragraphs || [''],
+              signature: cl.signature || translated.personalDetails?.name || 'Candidate',
+              valediction: cl.valediction || (isEn ? 'Sincerely,' : 'Atenciosamente,'),
+              personalDetails: translated.personalDetails || translated.personal || {}
+            }
+          }).catch(err => logger.warn('[TranslationWorker] Could not save cover letter to DB:', err.message));
+        }
+
+        // Log to SystemExecutionLog
+        if (prisma.systemExecutionLog) {
+          await prisma.systemExecutionLog.create({
+            data: {
+              level: 'info',
+              service: 'translationWorker',
+              message: `Translation job [${jobId}] processed for user [${userId}] to [${targetLang}]`,
+              metadata: {
+                jobId,
+                userId,
+                targetLang,
+                hasCoverLetter: Boolean(translated.coverLetterDetails || translated.coverLetter)
+              }
+            }
+          }).catch(err => logger.warn('[TranslationWorker] Could not create execution log:', err.message));
+        }
       }
 
       this.emitProgress(jobId, 100, isEn ? 'Translation completed successfully!' : 'Tradução concluída com sucesso!', translated, targetLang);

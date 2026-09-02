@@ -4,6 +4,7 @@ import { processInHtml } from '../services/tagProcessorService';
 import { sendAIChatMessage } from '../services/aiChatService';
 import { ChatMessage } from '../types/aiType';
 import { Button } from './atoms/Button';
+import { useI18n } from '../hooks/useI18n';
 
 interface AIChatDrawerProps {
   isOpen: boolean;
@@ -21,11 +22,15 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
   onClose,
   documentData,
   documentPayload,
-  lang = 'pt-BR',
+  lang,
   style,
   onApplyStructuredData,
   onApplyQuickFill
 }) => {
+  const { t, locale } = useI18n();
+  const currentLang = lang || locale;
+  const isPt = currentLang.startsWith('pt');
+
   const [activeTab, setActiveTab] = useState<'quickFill' | 'fileImport' | 'chat'>('quickFill');
   const [rawText, setRawText] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
@@ -66,9 +71,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
       console.error('AI Chat Error:', error);
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: lang === 'pt-BR'
-          ? '💡 <BOLD>Dica do Recrutador:</BOLD> Procure quantificar realizações com porcentagens ou métricas claras nas experiências profissionais.'
-          : '💡 <BOLD>Recruiter Tip:</BOLD> To maximize resume impact, quantify your achievements with clear percentages or metrics.'
+        content: `💡 <BOLD>${t('recruiterTip')}:</BOLD> ${t('tipQuantify')}`
       };
       setMessages([...updatedMessages, errorMessage]);
     } finally {
@@ -79,13 +82,13 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
   const handleExtractQuickFill = async () => {
     if (!rawText.trim()) return;
     setIsExtracting(true);
-    setStatusMessage(null);
+    setStatusMessage(t('processingAiStatus'));
 
     try {
       const res = await fetch('/api/ai/quick-fill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawText, language: lang })
+        body: JSON.stringify({ rawText, language: currentLang })
       });
 
       const contentType = res.headers.get('content-type') || '';
@@ -94,14 +97,14 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
         json = await res.json();
       } else {
         const text = await res.text();
-        throw new Error(`Servidor de IA respondeu com formato inesperado (${res.status}): ${text.slice(0, 120)}`);
+        throw new Error(`AI server unexpected response (${res.status}): ${text.slice(0, 120)}`);
       }
 
       if (res.ok && json?.success) {
         setExtractedPreview(json.data);
-        setStatusMessage(lang === 'pt-BR' ? '✓ Dados estruturados com sucesso! Clique em "Aplicar no Formulário".' : '✓ Successfully structured! Click "Apply to Resume".');
+        setStatusMessage(t('structuringSuccess'));
       } else {
-        throw new Error(json?.error || 'Falha ao processar texto');
+        throw new Error(json?.error || 'Failed to extract text');
       }
     } catch (err: any) {
       setStatusMessage(`⚠️ ${err.message}`);
@@ -116,7 +119,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
 
     setSelectedFileName(file.name);
     setIsExtracting(true);
-    setStatusMessage('Extraindo dados estruturados do arquivo com Llama 3.2...');
+    setStatusMessage(t('extractingFileStatus'));
 
     const reader = new FileReader();
     reader.onload = async () => {
@@ -137,15 +140,18 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
           json = await res.json();
         } else {
           const text = await res.text();
-          throw new Error(`Servidor de IA respondeu com erro (${res.status}): ${text.slice(0, 120)}`);
+          throw new Error(`AI server error (${res.status}): ${text.slice(0, 120)}`);
         }
 
         if (res.ok && json?.success) {
           setExtractedPreview(json.data);
-          const candidateName = json.data?.personalDetails?.name || json.data?.rawSchema?.candidato?.nome || 'candidato';
-          setStatusMessage(`✓ Currículo de ${candidateName} extraído com sucesso! Clique em "Aplicar no Formulário".`);
+          const candidateName = json.data?.personalDetails?.name || json.data?.rawSchema?.candidato?.nome || (isPt ? 'candidato' : 'candidate');
+          setStatusMessage(isPt
+            ? `✓ Currículo de ${candidateName} extraído com sucesso! Clique em "Aplicar no Formulário".`
+            : `✓ Resume for ${candidateName} successfully extracted! Click "${t('applyToFormBtn')}".`
+          );
         } else {
-          throw new Error(json?.error || 'Falha ao analisar arquivo');
+          throw new Error(json?.error || 'Failed to analyze file');
         }
       } catch (err: any) {
         setStatusMessage(`⚠️ ${err.message}`);
@@ -159,7 +165,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
   const handleApply = () => {
     if (!extractedPreview) return;
     applyHandler(extractedPreview);
-    setStatusMessage(lang === 'pt-BR' ? '🎉 Todos os campos foram preenchidos no formulário!' : '🎉 Data applied to form!');
+    setStatusMessage(isPt ? '🎉 Todos os campos foram preenchidos no formulário!' : '🎉 All fields applied to document!');
     setTimeout(() => onClose(), 1500);
   };
 
@@ -178,7 +184,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               activeTab === 'quickFill' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
             }`}
           >
-            ⚡ Quick Fill
+            ⚡ {t('tabQuickFill')}
           </button>
           <button
             type="button"
@@ -187,7 +193,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               activeTab === 'fileImport' ? 'bg-cyan-500 text-slate-950 shadow' : 'text-slate-400 hover:text-white'
             }`}
           >
-            📄 Importar Arquivo
+            📄 {t('tabFileImport')}
           </button>
           <button
             type="button"
@@ -196,7 +202,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               activeTab === 'chat' ? 'bg-violet-600 text-white shadow' : 'text-slate-400 hover:text-white'
             }`}
           >
-            💬 Chat
+            💬 {t('tabChat')}
           </button>
         </div>
 
@@ -216,10 +222,10 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
           <div className="space-y-3 animate-in fade-in text-xs">
             <div>
               <h4 className="font-bold text-cyan-300 uppercase tracking-wider mb-1">
-                Preenchimento Rápido com IA
+                {t('quickFillTitle')}
               </h4>
               <p className="text-slate-400 leading-relaxed">
-                Cole seu currículo em texto bruto ou descrição profissional. O Llama 3.2 estruturará automaticamente todos os campos.
+                {t('quickFillDesc')}
               </p>
             </div>
 
@@ -227,7 +233,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               rows={8}
               value={rawText}
               onChange={e => setRawText(e.target.value)}
-              placeholder="Cole aqui seu histórico, habilidades, experiências e contatos..."
+              placeholder={t('phRawText')}
               className="w-full p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 leading-relaxed focus:outline-none focus:border-cyan-400 font-sans"
             />
 
@@ -238,7 +244,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               isLoading={isExtracting}
               className="w-full font-bold min-h-[38px]"
             >
-              Extrair e Estruturar Dados
+              {t('structureWithAiBtn')}
             </Button>
           </div>
         )}
@@ -248,10 +254,10 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
           <div className="space-y-3.5 animate-in fade-in text-xs">
             <div>
               <h4 className="font-bold text-cyan-300 uppercase tracking-wider mb-1">
-                Importar Currículo Antigo (.PDF ou .DOCX)
+                {t('tabFileImport')} (.PDF / .DOCX)
               </h4>
               <p className="text-slate-400 leading-relaxed">
-                Carregue seu currículo existente em formato PDF ou Word. O motor de parsing extrairá nome, resumo, histórico e competências.
+                {t('fileImportDesc')}
               </p>
             </div>
 
@@ -269,10 +275,10 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
             >
               <span className="text-3xl">📁</span>
               <span className="font-bold text-slate-200 text-xs">
-                {selectedFileName ? selectedFileName : 'Clique ou arraste seu arquivo .pdf ou .docx aqui'}
+                {selectedFileName ? selectedFileName : t('selectFileBtn')}
               </span>
               <span className="text-[10px] text-slate-400">
-                Suporte nativo para PDF e Microsoft Word (.docx)
+                PDF & DOCX
               </span>
             </div>
 
@@ -284,7 +290,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               className="w-full font-bold min-h-[38px]"
               leftIcon="📤"
             >
-              {selectedFileName ? 'Trocar Arquivo' : 'Selecionar Arquivo do Computador'}
+              {selectedFileName ? (isPt ? 'Trocar Arquivo' : 'Change File') : t('selectFileBtn')}
             </Button>
           </div>
         )}
@@ -292,11 +298,24 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
         {/* TAB 3: RECRUITER AI CHAT */}
         {activeTab === 'chat' && (
           <div className="space-y-3 animate-in fade-in flex flex-col h-full">
-            <div className="flex-1 space-y-2 max-h-[360px] overflow-y-auto pr-1">
+            <div className="flex justify-between items-center border-b border-white/5 pb-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{t('chatTitle')}</span>
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearChat}
+                  className="text-[10px] text-slate-400 hover:text-red-400 transition cursor-pointer"
+                >
+                  {t('clearChatBtn')}
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-2 max-h-[340px] overflow-y-auto pr-1">
               {messages.length === 0 ? (
                 <div className="py-8 text-center space-y-2 text-xs text-slate-400">
                   <span className="text-2xl block">💬</span>
-                  <p>Pergunte ao especialista de RH como melhorar seu resumo, otimizar palavras-chave ATS ou reescrever bullets.</p>
+                  <p>{t('phChatMessage')}</p>
                 </div>
               ) : (
                 messages.map((m, idx) => (
@@ -315,6 +334,11 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
                   </div>
                 ))
               )}
+              {loading === 'Y' && (
+                <div className="text-xs text-cyan-300 italic animate-pulse">
+                  {t('chatThinking')}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2 pt-2 border-t border-white/10">
@@ -323,11 +347,11 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Pergunte ao recrutador..."
+                placeholder={t('phChatMessage')}
                 className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-100 focus:outline-none focus:border-cyan-400"
               />
               <Button variant="neon" size="sm" onClick={handleSendMessage} isLoading={loading === 'Y'}>
-                ➤
+                {t('sendBtn')}
               </Button>
             </div>
           </div>
@@ -344,14 +368,14 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
           <div className="p-3.5 rounded-xl bg-slate-900 border border-emerald-500/40 space-y-2 animate-in fade-in text-xs">
             <div className="flex justify-between items-center">
               <span className="font-bold text-emerald-400 uppercase tracking-wide">
-                ✓ Estrutura Identificada
+                {isPt ? '✓ Estrutura Identificada' : '✓ Structure Identified'}
               </span>
               <span className="text-[10px] text-slate-400">
                 {extractedPreview.personalDetails?.name || extractedPreview.name}
               </span>
             </div>
             <p className="text-[11px] text-slate-300 truncate">
-              Cargo: {extractedPreview.personalDetails?.title || extractedPreview.title || 'Especialista'}
+              {isPt ? 'Cargo: ' : 'Role: '}{extractedPreview.personalDetails?.title || extractedPreview.title || (isPt ? 'Especialista' : 'Specialist')}
             </p>
             <Button
               variant="neon"
@@ -359,7 +383,7 @@ export const AIChatDrawer: React.FC<AIChatDrawerProps> = ({
               onClick={handleApply}
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-[0_0_15px_rgba(16,185,129,0.4)] min-h-[38px]"
             >
-              🎉 Aplicar no Formulário Agora
+              🎉 {t('applyToFormBtn')}
             </Button>
           </div>
         )}
